@@ -2,15 +2,14 @@ import { useState, useEffect } from 'react';
 import AddYarn from './components/AddYarn';
 import YarnList from './components/YarnList';
 import { fetchPrice } from './api';
+import { saveYarnList, loadYarnList } from './storage';
 
 function App() {
   const [yarnList, setYarnList] = useState([]);
 
   useEffect(() => {
-    const stored = localStorage.getItem('yarnList');
-    if (stored) {
-      setYarnList(JSON.parse(stored));
-    }
+    const yarnList = loadYarnList();
+    setYarnList(yarnList);
   }, []);
 
   const addYarn = async (yarn) => {
@@ -28,7 +27,7 @@ function App() {
     }
     setYarnList(prev => {
       const newList = [...prev, newYarn];
-      localStorage.setItem('yarnList', JSON.stringify(newList));
+      saveYarnList(newList);
       return newList;
     });
   };
@@ -44,7 +43,7 @@ function App() {
               ? { ...y, currentPrice: price, lastChecked: new Date().toISOString() }
               : y
           );
-          localStorage.setItem('yarnList', JSON.stringify(newList));
+          saveYarnList(newList);
           return newList;
         });
       } catch (err) {
