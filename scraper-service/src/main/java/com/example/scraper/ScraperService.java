@@ -16,4 +16,22 @@ public class ScraperService {
         }
         return new GenericScraper();
     }
+
+    public String extractSiteName(String url) {
+        try {
+            URI uri = new URI(url);
+            String host = uri.getHost();
+            if (host != null) {
+                // Remove www. if present
+                if (host.startsWith("www.")) {
+                    host = host.substring(4);
+                }
+                // Use the domain as site name
+                return host;
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return "unknown";
+    }
 }

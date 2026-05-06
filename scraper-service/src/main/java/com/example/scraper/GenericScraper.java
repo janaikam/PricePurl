@@ -6,10 +6,13 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import java.util.Map;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 public class GenericScraper implements Scraper {
 
     @Override
-    public ScrapedData scrape(String url) throws Exception {
+    public ScrapedData scrape(String url, String siteName) throws Exception {
         try (Playwright playwright = Playwright.create()) {
             Browser browser = playwright.chromium().launch();
             BrowserContext context = browser.newContext();
@@ -103,7 +106,8 @@ public class GenericScraper implements Scraper {
                 """);
 
             browser.close();
-            return new ScrapedData(result.get("name"), result.get("price"));
+            String date = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
+            return new ScrapedData(siteName, result.get("name"), result.get("price"), date);
         }
     }
 }

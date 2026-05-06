@@ -11,8 +11,10 @@ public class ScraperController {
     @PostMapping("/scrape")
     public ScrapedData scrape(@RequestBody ScrapeRequest request) {
         try {
-            Scraper scraper = scraperService.getScraper(request.getUrl());
-            return scraper.scrape(request.getUrl());
+            String url = request.getUrl();
+            Scraper scraper = scraperService.getScraper(url);
+            String siteName = scraperService.extractSiteName(url);
+            return scraper.scrape(url, siteName);
         } catch (Exception e) {
             throw new RuntimeException("Failed to scrape: " + e.getMessage());
         }
