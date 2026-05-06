@@ -1,0 +1,8 @@
+com\example\scraper\GenericScraper.class
+com\example\scraper\ScraperApplication.class
+com\example\scraper\ScraperController.class
+com\example\scraper\ScraperController$ScrapeRequest.class
+com\example\scraper\Scraper.class
+com\example\scraper\HobbiiScraper.class
+com\example\scraper\ScrapedData.class
+com\example\scraper\ScraperService.class
