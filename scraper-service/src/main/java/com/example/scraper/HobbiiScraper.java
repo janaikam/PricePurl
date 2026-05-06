@@ -1,43 +1,81 @@
 package com.example.scraper;
 
-import com.microsoft.playwright.Browser;
-import com.microsoft.playwright.BrowserContext;
-import com.microsoft.playwright.Page;
-import com.microsoft.playwright.Playwright;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Map;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class HobbiiScraper implements Scraper {
 
+    private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     @Override
     public ScrapedData scrape(String url, String siteName) throws Exception {
-        try (Playwright playwright = Playwright.create()) {
-            Browser browser = playwright.chromium().launch();
-            BrowserContext context = browser.newContext();
-            Page page = context.newPage();
-
-            page.navigate(url);
-
-            Map<String, String> result = (Map<String, String>) page.evaluate(
-                "() => {" +
-                "    let name = null;" +
-                "    let price = null;" +
-                "    const h1 = document.querySelector('h1');" +
-                "    if (h1) { name = h1.textContent.trim(); }" +
-                "    const priceElement = document.querySelector('.price, [data-price]');" +
-                "    if (priceElement) {" +
-                "        const priceText = priceElement.textContent.trim();" +
-                "        const priceMatch = priceText.match(/\\$\\d+,?\\d*\\.\\d{2}/);" +
-                "        if (priceMatch) { price = priceMatch[0]; }" +
-                "    }" +
-                "    return { name: name, price: price };" +
-                "}"
-            );
-
-            browser.close();
-            String date = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
-            return new ScrapedData(siteName, result.get("name"), result.get("price"), date);
+        // Extract product handle from URL (e.g. /products/hp-1004384-dahlia-mixo)
+        URI uri = new URI(url);
+        String[] pathParts = uri.getPath().split("/");
+        String handle = null;
+        for (int i = 0; i < pathParts.length - 1; i++) {
+            if ("products".equals(pathParts[i])) {
+                handle = pathParts[i + 1];
+                break;
+            }
         }
+        if (handle == null) throw new Exception("Could not extract product handle from URL");
+
+        // Extract variant ID from query string
+        String variantId = null;
+        String query = uri.getQuery();
+        if (query != null) {
+            for (String param : query.split("&")) {
+                if (param.startsWith("variant=")) {
+                    variantId = param.substring("variant=".length());
+                    break;
+                }
+            }
+        }
+
+        // Call Shopify product JSON API
+        String jsonUrl = "https://hobbii.com/products/" + handle + ".json";
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(jsonUrl))
+            .header("User-Agent", "Mozilla/5.0")
+            .GET()
+            .build();
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+        JsonNode root = MAPPER.readTree(response.body());
+        JsonNode product = root.path("product");
+
+        String name = product.path("title").asText(null);
+        String price = null;
+
+        JsonNode variants = product.path("variants");
+        JsonNode selectedVariant = null;
+        if (variantId != null) {
+            for (JsonNode v : variants) {
+                if (variantId.equals(String.valueOf(v.path("id").asLong()))) {
+                    selectedVariant = v;
+                    break;
+                }
+            }
+        }
+        if (selectedVariant == null && variants.size() > 0) {
+            selectedVariant = variants.get(0);
+        }
+        if (selectedVariant != null) {
+            String rawPrice = selectedVariant.path("price").asText(null);
+            if (rawPrice != null) {
+                price = "$" + String.format("%.2f", Double.parseDouble(rawPrice));
+            }
+        }
+
+        String date = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
+        return new ScrapedData(siteName, name, price, date);
     }
 }

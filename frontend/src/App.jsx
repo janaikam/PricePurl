@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import AddYarn from './components/AddYarn';
 import YarnList from './components/YarnList';
-import { fetchPrice } from './api';
+import { fetchProductInfo } from './api';
 import { saveYarnList, loadYarnList } from './storage';
 
 function App() {
   const [yarnList, setYarnList] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const yarnList = loadYarnList();
@@ -13,15 +14,21 @@ function App() {
   }, []);
 
   const addYarn = async (yarn) => {
+    setError('');
     const newYarn = { ...yarn };
     if (newYarn.priceSource === 'scraped') {
       try {
-        const price = await fetchPrice(newYarn.url);
-        newYarn.currentPrice = price;
-        newYarn.lastChecked = new Date().toISOString();
+        const scraped = await fetchProductInfo(newYarn.url);
+        if (!scraped.price || !scraped.name) {
+          setError('Failed to scrape product info from the link.');
+          return;
+        }
+        newYarn.currentPrice = scraped.price;
+        newYarn.name = scraped.name || newYarn.name;
+        newYarn.siteName = scraped.siteName;
+        newYarn.lastChecked = scraped.date || new Date().toISOString();
       } catch (err) {
-        console.error('Failed to fetch price:', err);
-        // Optionally, show error to user
+        setError('Failed to fetch product info: ' + (err.message || err));
         return;
       }
     }
@@ -36,18 +43,18 @@ function App() {
     const yarn = yarnList.find(y => y.id === id);
     if (yarn && yarn.priceSource === 'scraped') {
       try {
-        const price = await fetchPrice(yarn.url);
+        const scraped = await fetchProductInfo(yarn.url);
         setYarnList(prev => {
           const newList = prev.map(y =>
             y.id === id
-              ? { ...y, currentPrice: price, lastChecked: new Date().toISOString() }
+              ? { ...y, currentPrice: scraped.price, name: scraped.name || y.name, siteName: scraped.siteName, lastChecked: scraped.date || new Date().toISOString() }
               : y
           );
           saveYarnList(newList);
           return newList;
         });
       } catch (err) {
-        console.error('Failed to refresh price:', err);
+        console.error('Failed to refresh product info:', err);
       }
     }
   };
@@ -55,6 +62,7 @@ function App() {
   return (
     <div>
       <h1>Yarn Price Tracker</h1>
+      {error && <div style={{ color: 'red', marginBottom: '1em' }}>{error}</div>}
       <AddYarn onAddYarn={addYarn} />
       <YarnList yarnList={yarnList} onRefresh={refreshPrice} />
     </div>
