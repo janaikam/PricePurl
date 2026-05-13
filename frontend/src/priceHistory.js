@@ -9,7 +9,12 @@ const normalizeDisplayPrice = (price) => {
     return '';
   }
 
-  return price.trim();
+  const numericPrice = parsePriceValue(price);
+  if (numericPrice === null) {
+    return price.trim();
+  }
+
+  return `$${numericPrice.toFixed(2)}`;
 };
 
 export const parsePriceValue = (price) => {
