@@ -1,6 +1,6 @@
 import YarnItem from './YarnItem';
 
-const YarnList = ({ title, emptyMessage, yarnList, onRefresh, onMarkPurchased, onRestore, onDelete }) => {
+const YarnList = ({ title, emptyMessage, yarnList, onSelectYarn }) => {
   return (
     <div>
       <h2>{title}</h2>
@@ -11,10 +11,7 @@ const YarnList = ({ title, emptyMessage, yarnList, onRefresh, onMarkPurchased, o
           <YarnItem
             key={yarn.id}
             yarn={yarn}
-            onRefresh={onRefresh}
-            onMarkPurchased={onMarkPurchased}
-            onRestore={onRestore}
-            onDelete={onDelete}
+            onSelect={onSelectYarn}
           />
         ))
       )}

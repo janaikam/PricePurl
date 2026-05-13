@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import AddYarn from './components/AddYarn';
+import YarnDetail from './components/YarnDetail';
 import YarnList from './components/YarnList';
 import { fetchProductInfo } from './api';
 import { saveYarnList, loadYarnList } from './storage';
@@ -10,6 +11,7 @@ const PURCHASED_STATUS = 'purchased';
 function App() {
   const [yarnList, setYarnList] = useState(() => loadYarnList());
   const [error, setError] = useState('');
+  const [selectedYarnId, setSelectedYarnId] = useState(null);
 
   const addYarn = async (yarn) => {
     setError('');
@@ -76,6 +78,10 @@ function App() {
   };
 
   const deleteYarn = (id) => {
+    if (selectedYarnId === id) {
+      setSelectedYarnId(null);
+    }
+
     setYarnList((prev) => {
       const newList = prev.filter((yarn) => yarn.id !== id);
       saveYarnList(newList);
@@ -85,28 +91,38 @@ function App() {
 
   const activeYarnList = yarnList.filter((yarn) => yarn.status !== PURCHASED_STATUS);
   const purchasedYarnList = yarnList.filter((yarn) => yarn.status === PURCHASED_STATUS);
+  const selectedYarn = yarnList.find((yarn) => yarn.id === selectedYarnId) || null;
 
   return (
     <div>
       <h1>Yarn Price Tracker</h1>
       {error && <div style={{ color: 'red', marginBottom: '1em' }}>{error}</div>}
-      <AddYarn onAddYarn={addYarn} />
-      <YarnList
-        title="Your Yarn List"
-        emptyMessage="No yarns in your active list yet."
-        yarnList={activeYarnList}
-        onRefresh={refreshPrice}
-        onMarkPurchased={markAsPurchased}
-        onDelete={deleteYarn}
-      />
-      <YarnList
-        title="Purchased Yarn"
-        emptyMessage="No purchased yarn is hidden right now."
-        yarnList={purchasedYarnList}
-        onRefresh={refreshPrice}
-        onRestore={restoreYarn}
-        onDelete={deleteYarn}
-      />
+      {selectedYarn ? (
+        <YarnDetail
+          yarn={selectedYarn}
+          onBack={() => setSelectedYarnId(null)}
+          onRefresh={refreshPrice}
+          onMarkPurchased={markAsPurchased}
+          onRestore={restoreYarn}
+          onDelete={deleteYarn}
+        />
+      ) : (
+        <>
+          <AddYarn onAddYarn={addYarn} />
+          <YarnList
+            title="Your Yarn List"
+            emptyMessage="No yarns in your active list yet."
+            yarnList={activeYarnList}
+            onSelectYarn={setSelectedYarnId}
+          />
+          <YarnList
+            title="Purchased Yarn"
+            emptyMessage="No purchased yarn is hidden right now."
+            yarnList={purchasedYarnList}
+            onSelectYarn={setSelectedYarnId}
+          />
+        </>
+      )}
     </div>
   );
 }

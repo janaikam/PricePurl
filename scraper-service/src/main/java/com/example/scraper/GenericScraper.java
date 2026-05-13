@@ -20,6 +20,7 @@ public class GenericScraper implements Scraper {
 
             page.navigate(url);
 
+            @SuppressWarnings("unchecked")
             Map<String, String> result = (Map<String, String>) page.evaluate("""
                 () => {
                     let name = null;
