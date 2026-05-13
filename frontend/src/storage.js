@@ -1,14 +1,8 @@
+import { normalizeYarnWithHistory } from './priceHistory';
+
 const STORAGE_KEY = 'yarnList';
 
-const normalizeYarn = (item) => ({
-  id: item.id,
-  name: item.name || '',
-  url: item.url || '',
-  currentPrice: item.currentPrice || '',
-  lastChecked: item.lastChecked || new Date().toISOString(),
-  priceSource: item.priceSource || 'manual',
-  status: item.status || 'active'
-});
+const normalizeYarn = (item) => normalizeYarnWithHistory(item);
 
 export const saveYarnList = (yarnList) => {
   // Ensure each item has the required fields

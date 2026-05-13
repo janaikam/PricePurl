@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { parsePriceValue } from '../priceHistory';
 
 const AddYarn = ({ onAddYarn }) => {
   const [name, setName] = useState('');
@@ -12,6 +13,11 @@ const AddYarn = ({ onAddYarn }) => {
 
     if (!url && !price) {
       setError('At least one of URL or price must be provided.');
+      return;
+    }
+
+    if (price && parsePriceValue(price) === null) {
+      setError('Enter a valid price such as 5.49 or $5.49.');
       return;
     }
 
