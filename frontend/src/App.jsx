@@ -1,21 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import AddYarn from './components/AddYarn';
 import YarnList from './components/YarnList';
 import { fetchProductInfo } from './api';
 import { saveYarnList, loadYarnList } from './storage';
 
-function App() {
-  const [yarnList, setYarnList] = useState([]);
-  const [error, setError] = useState('');
+const ACTIVE_STATUS = 'active';
+const PURCHASED_STATUS = 'purchased';
 
-  useEffect(() => {
-    const yarnList = loadYarnList();
-    setYarnList(yarnList);
-  }, []);
+function App() {
+  const [yarnList, setYarnList] = useState(() => loadYarnList());
+  const [error, setError] = useState('');
 
   const addYarn = async (yarn) => {
     setError('');
-    const newYarn = { ...yarn };
+    const newYarn = { ...yarn, status: ACTIVE_STATUS };
     if (newYarn.priceSource === 'scraped') {
       try {
         const scraped = await fetchProductInfo(newYarn.url);
@@ -59,12 +57,56 @@ function App() {
     }
   };
 
+  const updateYarnStatus = (id, status) => {
+    setYarnList((prev) => {
+      const newList = prev.map((yarn) => (
+        yarn.id === id ? { ...yarn, status } : yarn
+      ));
+      saveYarnList(newList);
+      return newList;
+    });
+  };
+
+  const markAsPurchased = (id) => {
+    updateYarnStatus(id, PURCHASED_STATUS);
+  };
+
+  const restoreYarn = (id) => {
+    updateYarnStatus(id, ACTIVE_STATUS);
+  };
+
+  const deleteYarn = (id) => {
+    setYarnList((prev) => {
+      const newList = prev.filter((yarn) => yarn.id !== id);
+      saveYarnList(newList);
+      return newList;
+    });
+  };
+
+  const activeYarnList = yarnList.filter((yarn) => yarn.status !== PURCHASED_STATUS);
+  const purchasedYarnList = yarnList.filter((yarn) => yarn.status === PURCHASED_STATUS);
+
   return (
     <div>
       <h1>Yarn Price Tracker</h1>
       {error && <div style={{ color: 'red', marginBottom: '1em' }}>{error}</div>}
       <AddYarn onAddYarn={addYarn} />
-      <YarnList yarnList={yarnList} onRefresh={refreshPrice} />
+      <YarnList
+        title="Your Yarn List"
+        emptyMessage="No yarns in your active list yet."
+        yarnList={activeYarnList}
+        onRefresh={refreshPrice}
+        onMarkPurchased={markAsPurchased}
+        onDelete={deleteYarn}
+      />
+      <YarnList
+        title="Purchased Yarn"
+        emptyMessage="No purchased yarn is hidden right now."
+        yarnList={purchasedYarnList}
+        onRefresh={refreshPrice}
+        onRestore={restoreYarn}
+        onDelete={deleteYarn}
+      />
     </div>
   );
 }
