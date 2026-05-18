@@ -155,7 +155,10 @@ export const derivePriceStatus = (yarn = {}) => {
   const hasLowestPrice = lowestPriceValue !== null && lowestPriceValue !== undefined;
   const hasRegularPrice = regularPriceValue !== null && regularPriceValue !== undefined;
   const isOnSale = hasCurrentPrice && hasRegularPrice && currentPriceValue < regularPriceValue;
-  const isAtHistoricalLow = hasCurrentPrice && hasLowestPrice && currentPriceValue === lowestPriceValue;
+  const isAtHistoricalLow = hasCurrentPrice
+    && hasLowestPrice
+    && currentPriceValue === lowestPriceValue
+    && (!hasRegularPrice || lowestPriceValue !== regularPriceValue);
 
   return {
     isOnSale,
