@@ -2,8 +2,15 @@ import { useEffect, useEffectEvent, useState } from 'react';
 import AddYarn from './components/AddYarn';
 import YarnDetail from './components/YarnDetail';
 import YarnList from './components/YarnList';
-import { fetchProductInfo } from './api';
-import { saveYarnList, loadYarnList } from './storage';
+import {
+  checkYarnDuplicate,
+  createYarnEntry,
+  deleteYarnEntry,
+  fetchProductInfo,
+  fetchYarnList,
+  updateYarnEntry,
+  updateYarnEntryStatus,
+} from './api';
 import { parsePriceValue, updateYarnPrice } from './priceHistory';
 
 const ACTIVE_STATUS = 'active';
@@ -11,21 +18,31 @@ const PURCHASED_STATUS = 'purchased';
 const AUTO_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 
 function App() {
-  const [yarnList, setYarnList] = useState(() => loadYarnList());
+  const [yarnList, setYarnList] = useState([]);
   const [error, setError] = useState('');
   const [selectedYarnId, setSelectedYarnId] = useState(null);
 
-  const persistYarnList = (updater) => {
-    setYarnList((prev) => {
-      const nextList = updater(prev);
-      saveYarnList(nextList);
-      return nextList;
-    });
-  };
+  const loadYarnListFromApi = useEffectEvent(async () => {
+    try {
+      const nextYarnList = await fetchYarnList();
+      setYarnList(nextYarnList);
+    } catch (err) {
+      setError('Failed to load yarn list: ' + (err.message || err));
+    }
+  });
+
+  useEffect(() => {
+    loadYarnListFromApi();
+  }, []);
 
   const addYarn = async (yarn) => {
     setError('');
-    const newYarn = { ...yarn, status: ACTIVE_STATUS };
+    const newYarn = {
+      ...yarn,
+      name: typeof yarn.name === 'string' ? yarn.name.trim() : '',
+      status: ACTIVE_STATUS,
+    };
+
     if (newYarn.priceSource === 'scraped') {
       try {
         const scraped = await fetchProductInfo(newYarn.url);
@@ -42,11 +59,36 @@ function App() {
         }));
       } catch (err) {
         setError('Failed to fetch product info: ' + (err.message || err));
-        return;
+        return false;
       }
     }
 
-    persistYarnList((prev) => [...prev, newYarn]);
+    if (!newYarn.name) {
+      setError('A yarn name is required before the yarn can be added.');
+      return false;
+    }
+
+    try {
+      const duplicateCheck = await checkYarnDuplicate(newYarn.name);
+
+      if (duplicateCheck.alreadyOnUserList) {
+        const confirmed = window.confirm(`"${duplicateCheck.matchedName || newYarn.name}" is already on your yarn list. Add another instance anyway?`);
+
+        if (!confirmed) {
+          return false;
+        }
+      }
+
+      const createdYarn = await createYarnEntry(newYarn, {
+        allowDuplicate: duplicateCheck.alreadyOnUserList,
+      });
+
+      setYarnList((prev) => [...prev, createdYarn]);
+      return true;
+    } catch (err) {
+      setError('Failed to add yarn: ' + (err.message || err));
+      return false;
+    }
   };
 
   const refreshPrice = async (id, { auto = false } = {}) => {
@@ -61,17 +103,18 @@ function App() {
         throw new Error('Scraper returned no price.');
       }
 
-      persistYarnList((prev) => prev.map((entry) => (
-        entry.id === id
-          ? updateYarnPrice(entry, {
-              price: scraped.price,
-              recordedAt: scraped.date || new Date().toISOString(),
-              source: 'scraped',
-              name: scraped.name || entry.name,
-              siteName: scraped.siteName || entry.siteName,
-              lastAutoRefreshAt: auto ? new Date().toISOString() : entry.lastAutoRefreshAt
-            })
-          : entry
+      const updatedYarn = updateYarnPrice(yarn, {
+        price: scraped.price,
+        recordedAt: scraped.date || new Date().toISOString(),
+        source: 'scraped',
+        name: scraped.name || yarn.name,
+        siteName: scraped.siteName || yarn.siteName,
+        lastAutoRefreshAt: auto ? new Date().toISOString() : yarn.lastAutoRefreshAt,
+      });
+      const savedYarn = await updateYarnEntry(id, updatedYarn);
+
+      setYarnList((prev) => prev.map((entry) => (
+        entry.id === id ? savedYarn : entry
       )));
     } catch (err) {
       if (!auto) {
@@ -82,48 +125,71 @@ function App() {
     }
   };
 
-  const addManualPrice = (id, price) => {
+  const addManualPrice = async (id, price) => {
     if (parsePriceValue(price) === null) {
       setError('Enter a valid manual price such as 5.49 or $5.49.');
       return false;
     }
 
-    setError('');
-    persistYarnList((prev) => prev.map((yarn) => (
-      yarn.id === id
-        ? updateYarnPrice(yarn, {
-            price,
-            recordedAt: new Date().toISOString(),
-            source: 'manual'
-          })
-        : yarn
-    )));
+    const yarn = yarnList.find((entry) => entry.id === id);
+    if (!yarn) {
+      setError('Unable to find that yarn entry.');
+      return false;
+    }
 
-    return true;
+    setError('');
+
+    try {
+      const updatedYarn = updateYarnPrice(yarn, {
+        price,
+        recordedAt: new Date().toISOString(),
+        source: 'manual',
+      });
+      const savedYarn = await updateYarnEntry(id, updatedYarn);
+
+      setYarnList((prev) => prev.map((entry) => (
+        entry.id === id ? savedYarn : entry
+      )));
+
+      return true;
+    } catch (err) {
+      setError('Failed to save manual price: ' + (err.message || err));
+      return false;
+    }
   };
 
-  const updateYarnStatus = (id, status) => {
-    persistYarnList((prev) => (
-      prev.map((yarn) => (
-        yarn.id === id ? { ...yarn, status } : yarn
-      ))
-    ));
+  const updateYarnStatus = async (id, status) => {
+    try {
+      const savedYarn = await updateYarnEntryStatus(id, status);
+
+      setYarnList((prev) => prev.map((yarn) => (
+        yarn.id === id ? savedYarn : yarn
+      )));
+    } catch (err) {
+      setError('Failed to update yarn status: ' + (err.message || err));
+    }
   };
 
   const markAsPurchased = (id) => {
-    updateYarnStatus(id, PURCHASED_STATUS);
+    void updateYarnStatus(id, PURCHASED_STATUS);
   };
 
   const restoreYarn = (id) => {
-    updateYarnStatus(id, ACTIVE_STATUS);
+    void updateYarnStatus(id, ACTIVE_STATUS);
   };
 
-  const deleteYarn = (id) => {
-    if (selectedYarnId === id) {
-      setSelectedYarnId(null);
-    }
+  const deleteYarn = async (id) => {
+    try {
+      await deleteYarnEntry(id);
 
-    persistYarnList((prev) => prev.filter((yarn) => yarn.id !== id));
+      if (selectedYarnId === id) {
+        setSelectedYarnId(null);
+      }
+
+      setYarnList((prev) => prev.filter((yarn) => yarn.id !== id));
+    } catch (err) {
+      setError('Failed to delete yarn: ' + (err.message || err));
+    }
   };
 
   const runAutoRefresh = useEffectEvent(() => {

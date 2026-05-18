@@ -7,9 +7,14 @@ const AddYarn = ({ onAddYarn }) => {
   const [price, setPrice] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!name.trim() && !url) {
+      setError('Enter a yarn name or provide a URL to scrape.');
+      return;
+    }
 
     if (!url && !price) {
       setError('At least one of URL or price must be provided.');
@@ -35,8 +40,10 @@ const AddYarn = ({ onAddYarn }) => {
       yarn.priceSource = 'scraped';
     }
 
-    onAddYarn(yarn);
-    clearInputs();
+    const didAdd = await onAddYarn(yarn);
+    if (didAdd) {
+      clearInputs();
+    }
   };
 
   const clearInputs = () => {

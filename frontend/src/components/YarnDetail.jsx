@@ -28,7 +28,7 @@ const YarnDetail = ({ yarn, onBack, onRefresh, onAddManualPrice, onMarkPurchased
     }
   };
 
-  const handleManualSubmit = (event) => {
+  const handleManualSubmit = async (event) => {
     event.preventDefault();
     setManualError('');
 
@@ -42,7 +42,7 @@ const YarnDetail = ({ yarn, onBack, onRefresh, onAddManualPrice, onMarkPurchased
       return;
     }
 
-    const didSave = onAddManualPrice(yarn.id, manualPrice);
+    const didSave = await onAddManualPrice(yarn.id, manualPrice);
     if (didSave) {
       setManualPrice('');
     }
