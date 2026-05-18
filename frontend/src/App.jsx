@@ -50,6 +50,10 @@ function App() {
           setError('Failed to scrape product info from the link.');
           return;
         }
+        if (scraped.regularPrice) {
+          newYarn.regularPrice = scraped.regularPrice;
+        }
+
         Object.assign(newYarn, updateYarnPrice(newYarn, {
           price: scraped.price,
           recordedAt: scraped.date || new Date().toISOString(),
@@ -103,7 +107,10 @@ function App() {
         throw new Error('Scraper returned no price.');
       }
 
-      const updatedYarn = updateYarnPrice(yarn, {
+      const updatedYarn = updateYarnPrice({
+        ...yarn,
+        regularPrice: scraped.regularPrice || yarn.regularPrice,
+      }, {
         price: scraped.price,
         recordedAt: scraped.date || new Date().toISOString(),
         source: 'scraped',
@@ -154,6 +161,37 @@ function App() {
       return true;
     } catch (err) {
       setError('Failed to save manual price: ' + (err.message || err));
+      return false;
+    }
+  };
+
+  const updateRegularPrice = async (id, regularPrice) => {
+    if (parsePriceValue(regularPrice) === null) {
+      setError('Enter a valid regular price such as 7.99 or $7.99.');
+      return false;
+    }
+
+    const yarn = yarnList.find((entry) => entry.id === id);
+    if (!yarn) {
+      setError('Unable to find that yarn entry.');
+      return false;
+    }
+
+    setError('');
+
+    try {
+      const savedYarn = await updateYarnEntry(id, {
+        ...yarn,
+        regularPrice,
+      });
+
+      setYarnList((prev) => prev.map((entry) => (
+        entry.id === id ? savedYarn : entry
+      )));
+
+      return true;
+    } catch (err) {
+      setError('Failed to save regular price: ' + (err.message || err));
       return false;
     }
   };
@@ -221,6 +259,7 @@ function App() {
           onBack={() => setSelectedYarnId(null)}
           onRefresh={refreshPrice}
           onAddManualPrice={addManualPrice}
+          onUpdateRegularPrice={updateRegularPrice}
           onMarkPurchased={markAsPurchased}
           onRestore={restoreYarn}
           onDelete={deleteYarn}

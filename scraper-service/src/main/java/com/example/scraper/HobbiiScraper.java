@@ -54,6 +54,7 @@ public class HobbiiScraper implements Scraper {
 
         String name = product.path("title").asText(null);
         String price = null;
+        String regularPrice = null;
 
         JsonNode variants = product.path("variants");
         JsonNode selectedVariant = null;
@@ -73,9 +74,18 @@ public class HobbiiScraper implements Scraper {
             if (rawPrice != null) {
                 price = "$" + String.format("%.2f", Double.parseDouble(rawPrice));
             }
+
+            String rawCompareAtPrice = selectedVariant.path("compare_at_price").asText(null);
+            if (rawPrice != null && rawCompareAtPrice != null && !"null".equals(rawCompareAtPrice)) {
+                double priceValue = Double.parseDouble(rawPrice);
+                double compareAtPriceValue = Double.parseDouble(rawCompareAtPrice);
+                if (compareAtPriceValue > priceValue) {
+                    regularPrice = "$" + String.format("%.2f", compareAtPriceValue);
+                }
+            }
         }
 
         String date = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
-        return new ScrapedData(siteName, name, price, date);
+        return new ScrapedData(siteName, name, price, regularPrice, date);
     }
 }

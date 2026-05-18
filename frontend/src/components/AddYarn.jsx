@@ -5,6 +5,7 @@ const AddYarn = ({ onAddYarn }) => {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [price, setPrice] = useState('');
+  const [regularPrice, setRegularPrice] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
@@ -26,11 +27,17 @@ const AddYarn = ({ onAddYarn }) => {
       return;
     }
 
+    if (regularPrice && parsePriceValue(regularPrice) === null) {
+      setError('Enter a valid regular price such as 7.99 or $7.99.');
+      return;
+    }
+
     const yarn = {
       id: crypto.randomUUID(),
       name,
       url,
       lastChecked: new Date().toISOString(),
+      regularPrice,
     };
 
     if (price) {
@@ -50,6 +57,7 @@ const AddYarn = ({ onAddYarn }) => {
     setName('');
     setUrl('');
     setPrice('');
+    setRegularPrice('');
   };
 
   return (
@@ -76,6 +84,15 @@ const AddYarn = ({ onAddYarn }) => {
           type="text"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
+        />
+      </div>
+      <div>
+        <label>Regular Price (optional):</label>
+        <input
+          type="text"
+          value={regularPrice}
+          onChange={(e) => setRegularPrice(e.target.value)}
+          placeholder="e.g. $7.99"
         />
       </div>
       {error && <p style={{ color: 'red' }}>{error}</p>}

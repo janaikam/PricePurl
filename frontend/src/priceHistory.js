@@ -124,6 +124,7 @@ export const normalizeYarnWithHistory = (item = {}) => {
 
   const metadata = derivePriceMetadata(priceHistory);
   const lastHistoryEntry = priceHistory[priceHistory.length - 1];
+  const regularPriceValue = parsePriceValue(item.regularPriceValue ?? item.regularPrice);
 
   return {
     id: item.id,
@@ -138,8 +139,27 @@ export const normalizeYarnWithHistory = (item = {}) => {
     lowestPriceAt: metadata.lowestPriceAt,
     priceHistory,
     priceSource: item.priceSource || DEFAULT_SOURCE,
+    regularPrice: regularPriceValue === null ? '' : normalizeDisplayPrice(regularPriceValue),
+    regularPriceValue,
     siteName: item.siteName || '',
     status: item.status || 'active'
+  };
+};
+
+export const derivePriceStatus = (yarn = {}) => {
+  const currentPriceValue = yarn.currentPriceValue;
+  const lowestPriceValue = yarn.lowestPriceValue;
+  const regularPriceValue = yarn.regularPriceValue;
+
+  const hasCurrentPrice = currentPriceValue !== null && currentPriceValue !== undefined;
+  const hasLowestPrice = lowestPriceValue !== null && lowestPriceValue !== undefined;
+  const hasRegularPrice = regularPriceValue !== null && regularPriceValue !== undefined;
+  const isOnSale = hasCurrentPrice && hasRegularPrice && currentPriceValue < regularPriceValue;
+  const isAtHistoricalLow = hasCurrentPrice && hasLowestPrice && currentPriceValue === lowestPriceValue;
+
+  return {
+    isOnSale,
+    isAtHistoricalLow
   };
 };
 

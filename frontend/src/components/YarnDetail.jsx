@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import PriceHistoryChart from './PriceHistoryChart';
-import { parsePriceValue } from '../priceHistory';
+import { derivePriceStatus, parsePriceValue } from '../priceHistory';
 
 const sectionStyle = {
   border: '1px solid #d7c2ba',
@@ -17,9 +17,12 @@ const formatTimestamp = (timestamp) => {
   return new Date(timestamp).toLocaleString();
 };
 
-const YarnDetail = ({ yarn, onBack, onRefresh, onAddManualPrice, onMarkPurchased, onRestore, onDelete }) => {
+const YarnDetail = ({ yarn, onBack, onRefresh, onAddManualPrice, onUpdateRegularPrice, onMarkPurchased, onRestore, onDelete }) => {
   const [manualPrice, setManualPrice] = useState('');
   const [manualError, setManualError] = useState('');
+  const [regularPrice, setRegularPrice] = useState(yarn.regularPrice || '');
+  const [regularPriceError, setRegularPriceError] = useState('');
+  const { isOnSale, isAtHistoricalLow } = derivePriceStatus(yarn);
 
   const handleDelete = () => {
     const confirmed = window.confirm('Delete this yarn permanently? This cannot be undone.');
@@ -48,6 +51,26 @@ const YarnDetail = ({ yarn, onBack, onRefresh, onAddManualPrice, onMarkPurchased
     }
   };
 
+  const handleRegularPriceSubmit = async (event) => {
+    event.preventDefault();
+    setRegularPriceError('');
+
+    if (!regularPrice.trim()) {
+      setRegularPriceError('Enter a regular price to save.');
+      return;
+    }
+
+    if (parsePriceValue(regularPrice) === null) {
+      setRegularPriceError('Enter a valid regular price such as 7.99 or $7.99.');
+      return;
+    }
+
+    const didSave = await onUpdateRegularPrice(yarn.id, regularPrice);
+    if (!didSave) {
+      setRegularPriceError('Could not save the regular price.');
+    }
+  };
+
   return (
     <div style={{ maxWidth: '960px', margin: '24px auto', textAlign: 'left', padding: '0 16px 32px' }}>
       <button type="button" onClick={onBack} style={{ marginBottom: '16px', borderRadius: '999px', border: '1px solid #d7c2ba', padding: '10px 14px', backgroundColor: '#fff7f3' }}>
@@ -72,7 +95,17 @@ const YarnDetail = ({ yarn, onBack, onRefresh, onAddManualPrice, onMarkPurchased
             <div style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7d645d' }}>Last checked</div>
             <div style={{ fontSize: '1rem', color: '#2f2a28' }}>{formatTimestamp(yarn.lastChecked)}</div>
           </div>
+          <div>
+            <div style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7d645d' }}>Regular price</div>
+            <div style={{ fontSize: '1rem', color: '#2f2a28' }}>{yarn.regularPrice || 'Not set'}</div>
+          </div>
         </div>
+        {(isOnSale || isAtHistoricalLow) && (
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+            {isOnSale && <span style={{ borderRadius: '999px', padding: '6px 12px', backgroundColor: '#dff4ea', color: '#17624a', fontWeight: 600 }}>On Sale</span>}
+            {isAtHistoricalLow && <span style={{ borderRadius: '999px', padding: '6px 12px', backgroundColor: '#fff1d7', color: '#8f5b00', fontWeight: 600 }}>Historical Low</span>}
+          </div>
+        )}
         <p style={{ marginBottom: '8px' }}>Source: {yarn.priceSource}</p>
         {yarn.url && <p style={{ marginBottom: '12px', overflowWrap: 'anywhere' }}>Original link: <a href={yarn.url} target="_blank" rel="noreferrer">{yarn.url}</a></p>}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -120,6 +153,23 @@ const YarnDetail = ({ yarn, onBack, onRefresh, onAddManualPrice, onMarkPurchased
           {manualError && <p style={{ marginTop: '10px', color: '#8f2d1e' }}>{manualError}</p>}
         </div>
       )}
+
+      <div style={{ ...sectionStyle, marginBottom: '20px' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '12px', color: '#2f2a28' }}>Set Regular Price</h3>
+        <form onSubmit={handleRegularPriceSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-start' }}>
+          <input
+            type="text"
+            value={regularPrice}
+            onChange={(event) => setRegularPrice(event.target.value)}
+            placeholder="e.g. $7.99"
+            style={{ flex: '1 1 220px', borderRadius: '12px', border: '1px solid #d7c2ba', padding: '12px' }}
+          />
+          <button type="submit" style={{ borderRadius: '999px', border: 'none', padding: '12px 18px', backgroundColor: '#1f6f5f', color: '#fff' }}>
+            Save Regular Price
+          </button>
+        </form>
+        {regularPriceError && <p style={{ marginTop: '10px', color: '#8f2d1e' }}>{regularPriceError}</p>}
+      </div>
 
       <div style={{ ...sectionStyle }}>
         <h3 style={{ marginTop: 0, marginBottom: '12px', color: '#2f2a28' }}>Recent Price Points</h3>

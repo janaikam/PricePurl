@@ -4,6 +4,7 @@ public class ScrapedData {
     private String siteName;
     private String name;
     private String price;
+    private String regularPrice;
     private String date; // ISO 8601 string
 
     public ScrapedData() {}
@@ -12,6 +13,15 @@ public class ScrapedData {
         this.siteName = siteName;
         this.name = name;
         this.price = price;
+        this.regularPrice = null;
+        this.date = date;
+    }
+
+    public ScrapedData(String siteName, String name, String price, String regularPrice, String date) {
+        this.siteName = siteName;
+        this.name = name;
+        this.price = price;
+        this.regularPrice = regularPrice;
         this.date = date;
     }
 
@@ -37,6 +47,14 @@ public class ScrapedData {
 
     public void setPrice(String price) {
         this.price = price;
+    }
+
+    public String getRegularPrice() {
+        return regularPrice;
+    }
+
+    public void setRegularPrice(String regularPrice) {
+        this.regularPrice = regularPrice;
     }
 
     public String getDate() {

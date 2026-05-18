@@ -4,10 +4,9 @@ import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
-import java.util.Map;
-
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
 public class GenericScraper implements Scraper {
 
@@ -24,9 +23,44 @@ public class GenericScraper implements Scraper {
             Map<String, String> result = (Map<String, String>) page.evaluate("""
                 () => {
                     let name = null;
-                    let price = null;
+                    let currentPrice = null;
+                    let regularPrice = null;
 
-                    // Common name selectors
+                    const parsePrice = (value) => {
+                        if (!value) {
+                            return null;
+                        }
+
+                        const match = value.match(/\$\d+,?\d*\.\d{2}/);
+                        return match ? match[0] : null;
+                    };
+
+                    const toNumericPrice = (value) => {
+                        if (!value) {
+                            return null;
+                        }
+
+                        const normalized = value.replace(/[^0-9.]/g, '');
+                        const parsed = Number.parseFloat(normalized);
+                        return Number.isFinite(parsed) ? parsed : null;
+                    };
+
+                    const firstPriceFromSelectors = (selectors) => {
+                        for (const selector of selectors) {
+                            const element = document.querySelector(selector);
+                            if (!element || !element.textContent.trim()) {
+                                continue;
+                            }
+
+                            const price = parsePrice(element.textContent.trim());
+                            if (price) {
+                                return price;
+                            }
+                        }
+
+                        return null;
+                    };
+
                     const nameSelectors = [
                         '.product-title',
                         '.product-name',
@@ -44,7 +78,7 @@ public class GenericScraper implements Scraper {
                         '.page-title'
                     ];
 
-                    for (let selector of nameSelectors) {
+                    for (const selector of nameSelectors) {
                         const element = document.querySelector(selector);
                         if (element && element.textContent.trim()) {
                             name = element.textContent.trim();
@@ -52,7 +86,6 @@ public class GenericScraper implements Scraper {
                         }
                     }
 
-                    // Fallback for name: look for title tag or first meaningful h1/h2
                     if (!name) {
                         const titleEl = document.querySelector('title');
                         if (titleEl && titleEl.textContent.trim()) {
@@ -62,7 +95,7 @@ public class GenericScraper implements Scraper {
 
                     if (!name) {
                         const headers = document.querySelectorAll('h1, h2');
-                        for (let header of headers) {
+                        for (const header of headers) {
                             if (header.textContent.trim().length > 3) {
                                 name = header.textContent.trim();
                                 break;
@@ -70,45 +103,91 @@ public class GenericScraper implements Scraper {
                         }
                     }
 
-                    // Common price selectors
-                    const priceSelectors = [
+                    const currentPriceSelectors = [
+                        '.current-price',
+                        '.sale-price',
+                        '.price-current',
+                        '.product-price-current',
+                        '.offer-price',
+                        '.final-price',
+                        '[data-sale-price]',
+                        '[itemprop="price"]',
+                        '.current-price span'
+                    ];
+
+                    const regularPriceSelectors = [
+                        '.compare-at-price',
+                        '.original-price',
+                        '.was-price',
+                        '.regular-price',
+                        '.list-price',
+                        '.msrp-price',
+                        '.old-price',
+                        '.price--compare',
+                        '.price--strikethrough',
+                        '[data-compare-at-price]',
+                        '[data-original-price]',
+                        '[data-was-price]'
+                    ];
+
+                    const fallbackPriceSelectors = [
                         '.price',
                         '.product-price',
                         '[data-price]',
-                        '.current-price',
-                        '.sale-price',
-                        '.regular-price',
-                        '.price-current',
-                        '.product-price-current',
                         '.price-amount',
-                        '.current-price span',
                         '.price-value',
-                        '[itemprop="price"]',
                         '.price-display',
-                        '.offer-price',
-                        '.final-price',
                         '.item-price'
                     ];
 
-                    for (let selector of priceSelectors) {
-                        const element = document.querySelector(selector);
-                        if (element && element.textContent.trim()) {
-                            const priceText = element.textContent.trim();
-                            const priceMatch = priceText.match(/\\$\\d+,?\\d*\\.\\d{2}/);
-                            if (priceMatch) {
-                                price = priceMatch[0];
-                                break;
+                    currentPrice = firstPriceFromSelectors(currentPriceSelectors);
+                    regularPrice = firstPriceFromSelectors(regularPriceSelectors);
+
+                    if (!currentPrice) {
+                        currentPrice = firstPriceFromSelectors(fallbackPriceSelectors);
+                    }
+
+                    if (!currentPrice || !regularPrice) {
+                        const priceRegex = /\$\d+,?\d*\.\d{2}/g;
+                        const distinctPrices = new Set();
+
+                        for (const element of document.querySelectorAll('body *')) {
+                            const textContent = element.textContent?.trim();
+                            if (!textContent || textContent.length > 120) {
+                                continue;
                             }
+
+                            const matches = textContent.match(priceRegex);
+                            if (matches) {
+                                matches.forEach((price) => distinctPrices.add(price));
+                            }
+                        }
+
+                        const sortedPrices = Array.from(distinctPrices)
+                            .map((price) => ({ label: price, value: toNumericPrice(price) }))
+                            .filter((price) => price.value !== null)
+                            .sort((left, right) => left.value - right.value);
+
+                        if (!currentPrice && sortedPrices.length > 0) {
+                            currentPrice = sortedPrices[0].label;
+                        }
+
+                        if (!regularPrice && sortedPrices.length > 1) {
+                            regularPrice = sortedPrices[sortedPrices.length - 1].label;
                         }
                     }
 
-                    return { name: name, price: price };
+                    if (currentPrice && regularPrice && toNumericPrice(regularPrice) <= toNumericPrice(currentPrice)) {
+                        regularPrice = null;
+                    }
+
+                    return { name, currentPrice, regularPrice };
                 }
                 """);
 
             browser.close();
             String date = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
-            return new ScrapedData(siteName, result.get("name"), result.get("price"), date);
+            return new ScrapedData(siteName, result.get("name"), result.get("currentPrice"), result.get("regularPrice"), date);
         }
     }
 }

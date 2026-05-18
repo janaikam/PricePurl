@@ -121,6 +121,7 @@ const sanitizeCatalogYarn = (item = {}, existing = {}) => {
   const trimmedName = typeof item.name === 'string' ? item.name.trim() : '';
   const fallbackLastChecked = item.lastChecked ?? existing.lastChecked ?? new Date().toISOString();
   const fallbackPriceSource = item.priceSource || existing.priceSource || DEFAULT_SOURCE;
+  const regularPriceValue = parsePriceValue(item.regularPriceValue ?? item.regularPrice ?? existing.regularPriceValue ?? existing.regularPrice);
   const priceHistory = Array.isArray(item.priceHistory)
     ? (item.priceHistory.length > 0
         ? item.priceHistory
@@ -152,6 +153,8 @@ const sanitizeCatalogYarn = (item = {}, existing = {}) => {
     lowestPriceAt: derivedMetadata.lowestPriceAt || (item.lowestPriceAt ?? existing.lowestPriceAt ?? null),
     priceHistory,
     priceSource: fallbackPriceSource,
+    regularPrice: regularPriceValue === null ? '' : normalizeDisplayPrice(regularPriceValue),
+    regularPriceValue,
     siteName: typeof item.siteName === 'string' ? item.siteName : (existing.siteName || '')
   };
 };
@@ -178,6 +181,8 @@ const buildJoinedYarn = (entry) => {
     lowestPriceAt: catalogYarn.lowestPriceAt,
     priceHistory: catalogYarn.priceHistory,
     priceSource: catalogYarn.priceSource,
+    regularPrice: catalogYarn.regularPrice,
+    regularPriceValue: catalogYarn.regularPriceValue,
     siteName: catalogYarn.siteName
   };
 };
@@ -216,7 +221,13 @@ app.post('/scrape', (req, res) => {
     .then(r => r.json())
     .then(data => {
       if (data && data.name && data.price) {
-        res.json({ name: data.name, price: data.price, siteName: data.siteName, date: data.date });
+        res.json({
+          name: data.name,
+          price: data.price,
+          regularPrice: data.regularPrice,
+          siteName: data.siteName,
+          date: data.date
+        });
       } else {
         res.status(500).json({ error: 'Failed to scrape product info' });
       }
