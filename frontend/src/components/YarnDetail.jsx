@@ -107,7 +107,28 @@ const YarnDetail = ({ yarn, onBack, onRefresh, onAddManualPrice, onUpdateRegular
           </div>
         )}
         <p style={{ marginBottom: '8px' }}>Source: {yarn.priceSource}</p>
-        {yarn.url && <p style={{ marginBottom: '12px', overflowWrap: 'anywhere' }}>Original link: <a href={yarn.url} target="_blank" rel="noreferrer">{yarn.url}</a></p>}
+        {yarn.url && (
+          <a
+            href={yarn.url}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '12px',
+              borderRadius: '999px',
+              border: 'none',
+              padding: '10px 16px',
+              backgroundColor: '#c94f3d',
+              color: '#fff',
+              textDecoration: 'none',
+              fontWeight: 600
+            }}
+          >
+            Buy Now
+          </a>
+        )}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {yarn.priceSource === 'scraped' && (
             <button type="button" onClick={() => onRefresh(yarn.id)} style={{ borderRadius: '999px', border: 'none', padding: '10px 16px', backgroundColor: '#1f6f5f', color: '#fff' }}>
