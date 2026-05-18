@@ -14,6 +14,101 @@ const yarnEntries = new Map();
 
 const normalizeName = (name = '') => name.trim().toLowerCase();
 
+const parsePriceValue = (price) => {
+  if (typeof price === 'number') {
+    return Number.isFinite(price) ? price : null;
+  }
+
+  if (typeof price !== 'string') {
+    return null;
+  }
+
+  const normalized = price.replace(/,/g, '').trim();
+  const match = normalized.match(/-?\d+(?:\.\d+)?/);
+
+  if (!match) {
+    return null;
+  }
+
+  const value = Number.parseFloat(match[0]);
+  return Number.isFinite(value) ? value : null;
+};
+
+const normalizeDisplayPrice = (price) => {
+  if (typeof price === 'number' && Number.isFinite(price)) {
+    return `$${price.toFixed(2)}`;
+  }
+
+  if (typeof price !== 'string') {
+    return '';
+  }
+
+  const numericPrice = parsePriceValue(price);
+  if (numericPrice === null) {
+    return price.trim();
+  }
+
+  return `$${numericPrice.toFixed(2)}`;
+};
+
+const createPriceHistoryEntry = ({
+  price,
+  recordedAt = new Date().toISOString(),
+  source = DEFAULT_SOURCE,
+  id = randomUUID()
+}) => {
+  const numericPrice = parsePriceValue(price);
+
+  if (numericPrice === null) {
+    return null;
+  }
+
+  return {
+    id,
+    recordedAt,
+    source,
+    displayPrice: normalizeDisplayPrice(price),
+    numericPrice
+  };
+};
+
+const buildInitialPriceHistory = ({ currentPrice, lastChecked, priceSource }) => {
+  const initialEntry = createPriceHistoryEntry({
+    price: currentPrice,
+    recordedAt: lastChecked,
+    source: priceSource
+  });
+
+  return initialEntry ? [initialEntry] : [];
+};
+
+const derivePriceMetadata = (priceHistory = []) => {
+  if (!Array.isArray(priceHistory) || priceHistory.length === 0) {
+    return {
+      currentPrice: '',
+      currentPriceValue: null,
+      lowestPrice: '',
+      lowestPriceValue: null,
+      lowestPriceAt: null,
+      lastChecked: null
+    };
+  }
+
+  const currentEntry = priceHistory[priceHistory.length - 1];
+  const lowestPriceValue = Math.min(...priceHistory.map((entry) => entry.numericPrice));
+  const lowestEntries = priceHistory.filter((entry) => entry.numericPrice === lowestPriceValue);
+  const latestLowestEntry = lowestEntries[lowestEntries.length - 1];
+
+  return {
+    currentPrice: currentEntry.displayPrice,
+    currentPriceValue: currentEntry.numericPrice,
+    lowestPrice: latestLowestEntry.displayPrice,
+    lowestPriceValue,
+    lowestPriceAt: latestLowestEntry.recordedAt,
+    lastChecked: currentEntry.recordedAt
+  };
+};
+
 const getCatalogByNormalizedName = (normalizedName) => (
   [...yarnCatalog.values()].find((yarn) => yarn.normalizedName === normalizedName) || null
 );
@@ -24,21 +119,39 @@ const getEntriesByYarnId = (yarnId) => (
 
 const sanitizeCatalogYarn = (item = {}, existing = {}) => {
   const trimmedName = typeof item.name === 'string' ? item.name.trim() : '';
+  const fallbackLastChecked = item.lastChecked ?? existing.lastChecked ?? new Date().toISOString();
+  const fallbackPriceSource = item.priceSource || existing.priceSource || DEFAULT_SOURCE;
+  const priceHistory = Array.isArray(item.priceHistory)
+    ? (item.priceHistory.length > 0
+        ? item.priceHistory
+        : buildInitialPriceHistory({
+            currentPrice: item.currentPrice,
+            lastChecked: fallbackLastChecked,
+            priceSource: fallbackPriceSource
+          }))
+    : (existing.priceHistory?.length
+        ? existing.priceHistory
+        : buildInitialPriceHistory({
+            currentPrice: item.currentPrice ?? existing.currentPrice,
+            lastChecked: fallbackLastChecked,
+            priceSource: fallbackPriceSource
+          }));
+  const derivedMetadata = derivePriceMetadata(priceHistory);
 
   return {
     id: existing.id || randomUUID(),
     normalizedName: normalizeName(trimmedName),
     name: trimmedName,
     url: typeof item.url === 'string' ? item.url : existing.url || '',
-    currentPrice: item.currentPrice ?? existing.currentPrice ?? '',
-    currentPriceValue: item.currentPriceValue ?? existing.currentPriceValue ?? null,
-    lastChecked: item.lastChecked ?? existing.lastChecked ?? new Date().toISOString(),
+    currentPrice: derivedMetadata.currentPrice || (item.currentPrice ?? existing.currentPrice ?? ''),
+    currentPriceValue: derivedMetadata.currentPriceValue ?? item.currentPriceValue ?? existing.currentPriceValue ?? null,
+    lastChecked: derivedMetadata.lastChecked || fallbackLastChecked,
     lastAutoRefreshAt: item.lastAutoRefreshAt ?? existing.lastAutoRefreshAt ?? null,
-    lowestPrice: item.lowestPrice ?? existing.lowestPrice ?? '',
-    lowestPriceValue: item.lowestPriceValue ?? existing.lowestPriceValue ?? null,
-    lowestPriceAt: item.lowestPriceAt ?? existing.lowestPriceAt ?? null,
-    priceHistory: Array.isArray(item.priceHistory) ? item.priceHistory : (existing.priceHistory || []),
-    priceSource: item.priceSource || existing.priceSource || DEFAULT_SOURCE,
+    lowestPrice: derivedMetadata.lowestPrice || (item.lowestPrice ?? existing.lowestPrice ?? ''),
+    lowestPriceValue: derivedMetadata.lowestPriceValue ?? item.lowestPriceValue ?? existing.lowestPriceValue ?? null,
+    lowestPriceAt: derivedMetadata.lowestPriceAt || (item.lowestPriceAt ?? existing.lowestPriceAt ?? null),
+    priceHistory,
+    priceSource: fallbackPriceSource,
     siteName: typeof item.siteName === 'string' ? item.siteName : (existing.siteName || '')
   };
 };
