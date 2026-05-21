@@ -12,17 +12,16 @@ const AddYarn = ({ onAddYarn }) => {
     e.preventDefault();
     setError('');
 
-    if (!name.trim() && !url) {
-      setError('Enter a yarn name or provide a URL to scrape.');
+    const hasName = Boolean(name.trim());
+    const hasUrl = Boolean(url.trim());
+    const hasPrice = Boolean(price.trim());
+
+    if (!hasUrl && (!hasName || !hasPrice)) {
+      setError('Add a product URL to scrape automatically, or enter both a yarn name and current price manually.');
       return;
     }
 
-    if (!url && !price) {
-      setError('At least one of URL or price must be provided.');
-      return;
-    }
-
-    if (price && parsePriceValue(price) === null) {
+    if (hasPrice && parsePriceValue(price) === null) {
       setError('Enter a valid price such as 5.49 or $5.49.');
       return;
     }
@@ -62,8 +61,11 @@ const AddYarn = ({ onAddYarn }) => {
 
   return (
     <form onSubmit={handleSubmit}>
+      <p style={{ marginTop: 0 }}>
+        Add a product URL to scrape details automatically, or enter both a name and current price manually.
+      </p>
       <div>
-        <label>Name (optional):</label>
+        <label>Name:</label>
         <input
           type="text"
           value={name}
@@ -71,23 +73,25 @@ const AddYarn = ({ onAddYarn }) => {
         />
       </div>
       <div>
-        <label>URL (optional):</label>
+        <label>URL:</label>
         <input
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
+          placeholder="e.g. hobbii.com/product"
         />
       </div>
       <div>
-        <label>Price (optional):</label>
+        <label>Current Price:</label>
         <input
           type="text"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
+          placeholder="e.g. $5.49"
         />
       </div>
       <div>
-        <label>Regular Price (optional):</label>
+        <label>Regular Price:</label>
         <input
           type="text"
           value={regularPrice}
