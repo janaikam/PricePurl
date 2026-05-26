@@ -1,9 +1,9 @@
 import YarnItem from './YarnItem';
 
-const YarnList = ({ title, emptyMessage, yarnList, onSelectYarn }) => {
+const YarnList = ({ title, emptyMessage, yarnList, onSelectYarn, hideTitle = false }) => {
   return (
     <div>
-      <h2>{title}</h2>
+      {!hideTitle && <h2>{title}</h2>}
       {yarnList.length === 0 ? (
         <p>{emptyMessage}</p>
       ) : (

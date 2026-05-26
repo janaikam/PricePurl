@@ -13,6 +13,36 @@ const PURCHASED_STATUS = 'purchased';
 const AUTO_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 const GUEST_IMPORT_DISMISSED_KEY = 'guestImportDismissedUserId';
 
+const collapsibleSectionStyle = {
+  maxWidth: '960px',
+  margin: '0 auto 24px',
+  borderRadius: '18px',
+  border: '1px solid var(--border-subtle)',
+  backgroundColor: 'var(--surface-card)',
+  boxShadow: 'var(--shadow-soft)',
+  textAlign: 'left',
+  overflow: 'hidden',
+};
+
+const collapsibleToggleStyle = {
+  width: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '12px',
+  padding: '18px 20px',
+  border: 'none',
+  background: 'transparent',
+  color: 'var(--text-primary)',
+  textAlign: 'left',
+  fontWeight: 700,
+  cursor: 'pointer',
+};
+
+const collapsibleContentStyle = {
+  padding: '0 20px 20px',
+};
+
 const prepareGuestYarnForRemote = (yarn) => {
   const { id: _id, yarnId: _yarnId, ...remoteYarn } = yarn;
   return remoteYarn;
@@ -28,6 +58,9 @@ function App() {
   const [guestYarnCount, setGuestYarnCount] = useState(0);
   const [showGuestImportPrompt, setShowGuestImportPrompt] = useState(false);
   const [isImportingGuestYarns, setIsImportingGuestYarns] = useState(false);
+  const [isActiveListOpen, setIsActiveListOpen] = useState(true);
+  const [isPurchasedListOpen, setIsPurchasedListOpen] = useState(false);
+  const [isAddYarnOpen, setIsAddYarnOpen] = useState(false);
   const accessToken = session?.access_token || '';
 
   const createAuthenticatedRepository = () => createApiClient({
@@ -524,21 +557,12 @@ function App() {
   const activeYarnList = yarnList.filter((yarn) => yarn.status !== PURCHASED_STATUS);
   const purchasedYarnList = yarnList.filter((yarn) => yarn.status === PURCHASED_STATUS);
   const selectedYarn = yarnList.find((yarn) => yarn.id === selectedYarnId) || null;
+  const activeListLabel = `Your Yarn List (${activeYarnList.length})`;
+  const purchasedListLabel = `Purchased Yarn (${purchasedYarnList.length})`;
 
   return (
     <div style={{ padding: '0 16px 32px' }}>
       <h1>Yarn Price Tracker</h1>
-      <AuthPanel
-        session={session}
-        isAuthReady={isAuthReady}
-        isSupabaseConfigured={isSupabaseConfigured}
-        guestYarnCount={guestYarnCount}
-        onSignIn={handleSignIn}
-        onSignUp={handleSignUp}
-        onSignOut={handleSignOut}
-        onImportGuestYarns={importGuestYarns}
-        isImportingGuestYarns={isImportingGuestYarns}
-      />
       {error && <div style={{ color: 'var(--status-error-text)', marginBottom: '1em' }}>{error}</div>}
       {notice && <div style={{ color: 'var(--status-success-text)', marginBottom: '1em' }}>{notice}</div>}
       {session?.user && showGuestImportPrompt && (
@@ -569,18 +593,79 @@ function App() {
         />
       ) : (
         <>
-          <AddYarn onAddYarn={addYarn} />
-          <YarnList
-            title="Your Yarn List"
-            emptyMessage="No yarns in your active list yet."
-            yarnList={activeYarnList}
-            onSelectYarn={setSelectedYarnId}
-          />
-          <YarnList
-            title="Purchased Yarn"
-            emptyMessage="No purchased yarn is hidden right now."
-            yarnList={purchasedYarnList}
-            onSelectYarn={setSelectedYarnId}
+          <section style={collapsibleSectionStyle}>
+            <button
+              type="button"
+              onClick={() => setIsActiveListOpen((currentValue) => !currentValue)}
+              style={collapsibleToggleStyle}
+              aria-expanded={isActiveListOpen}
+            >
+              <span>{activeListLabel}</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>{isActiveListOpen ? 'Hide' : 'Show'}</span>
+            </button>
+            {isActiveListOpen && (
+              <div style={collapsibleContentStyle}>
+                <YarnList
+                  title="Your Yarn List"
+                  emptyMessage="No yarns in your active list yet."
+                  yarnList={activeYarnList}
+                  onSelectYarn={setSelectedYarnId}
+                  hideTitle
+                />
+              </div>
+            )}
+          </section>
+
+          <section style={collapsibleSectionStyle}>
+            <button
+              type="button"
+              onClick={() => setIsAddYarnOpen((currentValue) => !currentValue)}
+              style={collapsibleToggleStyle}
+              aria-expanded={isAddYarnOpen}
+            >
+              <span>Add Yarn</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>{isAddYarnOpen ? 'Hide' : 'Show'}</span>
+            </button>
+            {isAddYarnOpen && (
+              <div style={collapsibleContentStyle}>
+                <AddYarn onAddYarn={addYarn} />
+              </div>
+            )}
+          </section>
+
+          <section style={collapsibleSectionStyle}>
+            <button
+              type="button"
+              onClick={() => setIsPurchasedListOpen((currentValue) => !currentValue)}
+              style={collapsibleToggleStyle}
+              aria-expanded={isPurchasedListOpen}
+            >
+              <span>{purchasedListLabel}</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>{isPurchasedListOpen ? 'Hide' : 'Show'}</span>
+            </button>
+            {isPurchasedListOpen && (
+              <div style={collapsibleContentStyle}>
+                <YarnList
+                  title="Purchased Yarn"
+                  emptyMessage="No purchased yarn is hidden right now."
+                  yarnList={purchasedYarnList}
+                  onSelectYarn={setSelectedYarnId}
+                  hideTitle
+                />
+              </div>
+            )}
+          </section>
+
+          <AuthPanel
+            session={session}
+            isAuthReady={isAuthReady}
+            isSupabaseConfigured={isSupabaseConfigured}
+            guestYarnCount={guestYarnCount}
+            onSignIn={handleSignIn}
+            onSignUp={handleSignUp}
+            onSignOut={handleSignOut}
+            onImportGuestYarns={importGuestYarns}
+            isImportingGuestYarns={isImportingGuestYarns}
           />
         </>
       )}
