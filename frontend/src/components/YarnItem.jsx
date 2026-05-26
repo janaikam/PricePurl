@@ -23,18 +23,19 @@ const YarnItem = ({ yarn, onSelect }) => {
         alignItems: 'center',
         gap: '16px',
         width: '100%',
-        border: '1px solid #d7c2ba',
+        border: '1px solid var(--border-subtle)',
         borderRadius: '16px',
         padding: '14px 16px',
         margin: '10px 0',
         textAlign: 'left',
-        backgroundColor: '#fffaf8',
+        backgroundColor: 'var(--surface-card)',
+        boxShadow: 'var(--shadow-soft)',
         cursor: 'pointer'
       }}
     >
       <div style={{ minWidth: 0 }}>
-        <h3 style={{ margin: 0, color: '#2f2a28' }}>{yarn.name || 'Unnamed Yarn'}</h3>
-        <div style={{ marginTop: '6px', color: '#7d645d', fontSize: '0.92rem' }}>
+        <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>{yarn.name || 'Unnamed Yarn'}</h3>
+        <div style={{ marginTop: '6px', color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
           {yarn.currentPrice || 'Price unavailable'}
         </div>
       </div>
@@ -43,14 +44,14 @@ const YarnItem = ({ yarn, onSelect }) => {
           <span
             style={{
               ...badgeStyle,
-              backgroundColor: isOnSale ? '#dff4ea' : '#fff1d7',
-              color: isOnSale ? '#17624a' : '#8f5b00'
+              backgroundColor: isOnSale ? 'var(--status-success-bg)' : 'var(--status-warning-bg)',
+              color: isOnSale ? 'var(--status-success-text)' : 'var(--status-warning-text)'
             }}
           >
             {statusLabel}
           </span>
         )}
-        <span style={{ color: '#7d645d', fontWeight: 600, whiteSpace: 'nowrap' }}>
+        <span style={{ color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
           View ›
         </span>
       </div>

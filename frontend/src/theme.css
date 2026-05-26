@@ -1,0 +1,132 @@
+:root {
+  --color-berry-pink: #d65a92;
+  --color-sky-blue: #6ab7ff;
+  --color-peach: #ffb38a;
+  --color-app-background: #f6f2ff;
+  --color-card-background: #ffffff;
+  --color-secondary-surface: #eee7ff;
+  --color-primary-text: #283044;
+  --color-secondary-text: #5b6475;
+  --color-muted-text: #8a90a2;
+  --color-success-green: #4caf78;
+  --color-warning-gold: #e0a63e;
+  --color-error-coral: #e76f6f;
+  --color-info-blue: #4a90e2;
+  --color-border-light: #ddd6f5;
+  --color-border-dark: #b9b0d9;
+  --color-pink-hover: #c24c82;
+  --color-blue-hover: #58a8f2;
+  --color-peach-hover: #f5a176;
+  --color-dark-background: #1f2230;
+  --color-dark-surface: #2b3145;
+  --color-dark-card: #353c52;
+  --color-dark-text: #f4f6fa;
+  --color-dark-muted-text: #b6bed1;
+
+  --font-body: 'Avenir Next', 'Segoe UI', sans-serif;
+  --font-heading: 'Trebuchet MS', 'Avenir Next', sans-serif;
+  --font-mono: 'Cascadia Code', Consolas, monospace;
+
+  --app-bg: var(--color-app-background);
+  --app-shell-bg: rgba(255, 255, 255, 0.28);
+  --surface-card: var(--color-card-background);
+  --surface-subtle: var(--color-secondary-surface);
+  --surface-panel: linear-gradient(135deg, #fff8fc 0%, var(--color-secondary-surface) 52%, var(--color-card-background) 100%);
+  --surface-hero: linear-gradient(135deg, rgba(214, 90, 146, 0.14) 0%, rgba(106, 183, 255, 0.14) 100%);
+  --surface-chart: #fffafb;
+
+  --text-primary: var(--color-primary-text);
+  --text-secondary: var(--color-secondary-text);
+  --text-muted: var(--color-muted-text);
+  --text-inverse: #ffffff;
+
+  --border-subtle: var(--color-border-light);
+  --border-strong: var(--color-border-dark);
+
+  --button-primary-bg: var(--color-berry-pink);
+  --button-primary-hover: var(--color-pink-hover);
+  --button-primary-text: var(--text-inverse);
+  --button-secondary-bg: var(--surface-card);
+  --button-secondary-hover: var(--surface-subtle);
+  --button-secondary-text: var(--text-secondary);
+  --button-secondary-border: var(--border-subtle);
+  --button-success-bg: var(--color-sky-blue);
+  --button-success-hover: var(--color-blue-hover);
+  --button-accent-bg: var(--color-peach);
+  --button-accent-hover: var(--color-peach-hover);
+
+  --status-success-bg: rgba(76, 175, 120, 0.16);
+  --status-success-text: #2f7a56;
+  --status-warning-bg: rgba(224, 166, 62, 0.18);
+  --status-warning-text: #8a5e0d;
+  --status-error-bg: rgba(231, 111, 111, 0.14);
+  --status-error-text: #b14f4f;
+  --status-info-bg: rgba(74, 144, 226, 0.14);
+  --status-info-text: #2f6ec0;
+
+  --chart-axis: var(--border-strong);
+  --chart-line: var(--color-sky-blue);
+  --chart-point: var(--color-peach);
+  --chart-low-point: var(--color-berry-pink);
+  --chart-label: var(--text-secondary);
+  --chart-low-label: var(--status-error-text);
+
+  --focus-ring: rgba(106, 183, 255, 0.3);
+  --shadow-soft: 0 18px 44px rgba(70, 58, 104, 0.1), 0 10px 22px rgba(70, 58, 104, 0.08);
+
+  --text: var(--text-secondary);
+  --text-h: var(--text-primary);
+  --bg: var(--app-bg);
+  --border: var(--border-subtle);
+  --code-bg: var(--surface-subtle);
+  --accent: var(--button-primary-bg);
+  --accent-bg: rgba(214, 90, 146, 0.12);
+  --accent-border: rgba(214, 90, 146, 0.34);
+  --social-bg: rgba(238, 231, 255, 0.72);
+  --shadow: var(--shadow-soft);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --app-bg: var(--color-dark-background);
+    --app-shell-bg: rgba(31, 34, 48, 0.72);
+    --surface-card: var(--color-dark-card);
+    --surface-subtle: var(--color-dark-surface);
+    --surface-panel: linear-gradient(135deg, rgba(214, 90, 146, 0.18) 0%, rgba(43, 49, 69, 0.96) 52%, rgba(53, 60, 82, 0.98) 100%);
+    --surface-hero: linear-gradient(135deg, rgba(214, 90, 146, 0.22) 0%, rgba(106, 183, 255, 0.16) 100%);
+    --surface-chart: rgba(43, 49, 69, 0.96);
+
+    --text-primary: var(--color-dark-text);
+    --text-secondary: var(--color-dark-muted-text);
+    --text-muted: #8f9ab4;
+    --text-inverse: #141824;
+
+    --border-subtle: #47506a;
+    --border-strong: #69738f;
+
+    --button-secondary-bg: var(--surface-subtle);
+    --button-secondary-hover: #39415c;
+    --button-secondary-text: var(--text-primary);
+    --button-secondary-border: var(--border-strong);
+
+    --status-success-bg: rgba(76, 175, 120, 0.22);
+    --status-success-text: #8bddb2;
+    --status-warning-bg: rgba(224, 166, 62, 0.24);
+    --status-warning-text: #ffd37d;
+    --status-error-bg: rgba(231, 111, 111, 0.24);
+    --status-error-text: #ff9f9f;
+    --status-info-bg: rgba(74, 144, 226, 0.24);
+    --status-info-text: #9bc7ff;
+
+    --chart-axis: var(--border-strong);
+    --chart-label: var(--text-secondary);
+    --chart-low-label: #ffb4b4;
+
+    --focus-ring: rgba(106, 183, 255, 0.34);
+    --shadow-soft: 0 20px 48px rgba(0, 0, 0, 0.32), 0 10px 24px rgba(0, 0, 0, 0.24);
+
+    --accent-bg: rgba(214, 90, 146, 0.18);
+    --accent-border: rgba(214, 90, 146, 0.42);
+    --social-bg: rgba(53, 60, 82, 0.78);
+  }
+}

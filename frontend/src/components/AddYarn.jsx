@@ -99,7 +99,7 @@ const AddYarn = ({ onAddYarn }) => {
           placeholder="e.g. $7.99"
         />
       </div>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p style={{ color: 'var(--status-error-text)' }}>{error}</p>}
       <button type="submit">Add Yarn</button>
     </form>
   );

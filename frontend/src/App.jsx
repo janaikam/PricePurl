@@ -539,18 +539,18 @@ function App() {
         onImportGuestYarns={importGuestYarns}
         isImportingGuestYarns={isImportingGuestYarns}
       />
-      {error && <div style={{ color: 'red', marginBottom: '1em' }}>{error}</div>}
-      {notice && <div style={{ color: '#17624a', marginBottom: '1em' }}>{notice}</div>}
+      {error && <div style={{ color: 'var(--status-error-text)', marginBottom: '1em' }}>{error}</div>}
+      {notice && <div style={{ color: 'var(--status-success-text)', marginBottom: '1em' }}>{notice}</div>}
       {session?.user && showGuestImportPrompt && (
-        <div style={{ maxWidth: '960px', margin: '0 auto 24px', padding: '16px 18px', borderRadius: '18px', border: '1px solid #d7c2ba', backgroundColor: '#fff', textAlign: 'left' }}>
+        <div style={{ maxWidth: '960px', margin: '0 auto 24px', padding: '16px 18px', borderRadius: '18px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--surface-card)', boxShadow: 'var(--shadow-soft)', textAlign: 'left' }}>
           <p style={{ marginBottom: '12px' }}>
             You still have {guestYarnCount} guest yarn{guestYarnCount === 1 ? '' : 's'} stored only in this browser. Import them into your signed-in account?
           </p>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button type="button" onClick={importGuestYarns} disabled={isImportingGuestYarns} style={{ borderRadius: '999px', border: 'none', padding: '10px 16px', backgroundColor: '#c94f3d', color: '#fff' }}>
+            <button type="button" onClick={importGuestYarns} disabled={isImportingGuestYarns} style={{ borderRadius: '999px', border: 'none', padding: '10px 16px', backgroundColor: 'var(--button-primary-bg)', color: 'var(--button-primary-text)', fontWeight: 600 }}>
               {isImportingGuestYarns ? 'Importing...' : 'Import Into Account'}
             </button>
-            <button type="button" onClick={handleDismissGuestImport} style={{ borderRadius: '999px', border: '1px solid #d7c2ba', padding: '10px 16px', backgroundColor: '#fff' }}>
+            <button type="button" onClick={handleDismissGuestImport} style={{ borderRadius: '999px', border: '1px solid var(--button-secondary-border)', padding: '10px 16px', backgroundColor: 'var(--button-secondary-bg)', color: 'var(--button-secondary-text)', fontWeight: 600 }}>
               Keep Local Only
             </button>
           </div>
