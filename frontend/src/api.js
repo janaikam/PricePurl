@@ -10,68 +10,108 @@ const readJson = async (response, fallbackMessage) => {
   return data;
 };
 
+const requestJson = async (path, {
+  method = 'GET',
+  body,
+  accessToken = '',
+  onUnauthorized,
+} = {}) => {
+  const headers = {};
+
+  if (body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  if (response.status === 401 && onUnauthorized) {
+    await onUnauthorized();
+  }
+
+  return readJson(response, 'Request failed');
+};
+
 export const fetchProductInfo = async (url) => {
-  const response = await fetch(`${API_BASE_URL}/scrape`, {
+  return requestJson('/scrape', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ url }),
+    body: { url },
   });
-
-  return readJson(response, 'Failed to fetch product info');
 };
 
-export const fetchYarnList = async () => {
-  const response = await fetch(`${API_BASE_URL}/api/yarn`);
-  return readJson(response, 'Failed to load yarn list');
-};
+export const createApiClient = ({ getAccessToken, onUnauthorized } = {}) => {
+  const getRequiredAccessToken = async () => {
+    const accessToken = await getAccessToken?.();
 
-export const checkYarnDuplicate = async (name) => {
-  const response = await fetch(`${API_BASE_URL}/api/yarn/check?name=${encodeURIComponent(name)}`);
-  return readJson(response, 'Failed to check for duplicate yarns');
-};
+    if (!accessToken) {
+      throw new Error('Authentication is required');
+    }
 
-export const createYarnEntry = async (yarn, { allowDuplicate = false } = {}) => {
-  const response = await fetch(`${API_BASE_URL}/api/yarn`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ yarn, allowDuplicate }),
-  });
+    return accessToken;
+  };
 
-  return readJson(response, 'Failed to add yarn');
-};
+  const requestWithAuth = async (path, options = {}, fallbackMessage) => {
+    const accessToken = await getRequiredAccessToken();
 
-export const updateYarnEntry = async (id, yarn) => {
-  const response = await fetch(`${API_BASE_URL}/api/yarn/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ yarn }),
-  });
+    try {
+      return await requestJson(path, {
+        ...options,
+        accessToken,
+        onUnauthorized,
+      });
+    } catch (error) {
+      if (!error.message || error.message === 'Request failed') {
+        throw new Error(fallbackMessage);
+      }
 
-  return readJson(response, 'Failed to update yarn');
-};
+      throw error;
+    }
+  };
 
-export const updateYarnEntryStatus = async (id, status) => {
-  const response = await fetch(`${API_BASE_URL}/api/yarn/${id}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ status }),
-  });
-
-  return readJson(response, 'Failed to update yarn status');
-};
-
-export const deleteYarnEntry = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/api/yarn/${id}`, {
-    method: 'DELETE',
-  });
-
-  return readJson(response, 'Failed to delete yarn');
+  return {
+    fetchYarnList: async () => requestWithAuth('/api/yarn', {}, 'Failed to load yarn list'),
+    checkYarnDuplicate: async (name) => requestWithAuth(
+      `/api/yarn/check?name=${encodeURIComponent(name)}`,
+      {},
+      'Failed to check for duplicate yarns'
+    ),
+    createYarnEntry: async (yarn, { allowDuplicate = false } = {}) => requestWithAuth(
+      '/api/yarn',
+      {
+        method: 'POST',
+        body: { yarn, allowDuplicate },
+      },
+      'Failed to add yarn'
+    ),
+    updateYarnEntry: async (id, yarn) => requestWithAuth(
+      `/api/yarn/${id}`,
+      {
+        method: 'PUT',
+        body: { yarn },
+      },
+      'Failed to update yarn'
+    ),
+    updateYarnEntryStatus: async (id, status) => requestWithAuth(
+      `/api/yarn/${id}`,
+      {
+        method: 'PATCH',
+        body: { status },
+      },
+      'Failed to update yarn status'
+    ),
+    deleteYarnEntry: async (id) => requestWithAuth(
+      `/api/yarn/${id}`,
+      {
+        method: 'DELETE',
+      },
+      'Failed to delete yarn'
+    ),
+  };
 };

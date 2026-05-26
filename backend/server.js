@@ -7,16 +7,37 @@ const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const SUPABASE_URL = process.env.SUPABASE_URL;
+const normalizeSupabaseUrl = (value = '') => value.replace(/\/rest\/v1\/?$/i, '').trim();
+const SUPABASE_URL = normalizeSupabaseUrl(process.env.SUPABASE_URL || '');
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SUPABASE_DEFAULT_USER_ID = process.env.SUPABASE_DEFAULT_USER_ID;
+
+const parseJwtPayload = (token = '') => {
+  if (typeof token !== 'string') {
+    return null;
+  }
+
+  const segments = token.split('.');
+
+  if (segments.length < 2) {
+    return null;
+  }
+
+  try {
+    const payload = Buffer.from(segments[1], 'base64url').toString('utf8');
+    return JSON.parse(payload);
+  } catch {
+    return null;
+  }
+};
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.');
 }
 
-if (!SUPABASE_DEFAULT_USER_ID) {
-  throw new Error('SUPABASE_DEFAULT_USER_ID is required until auth is implemented.');
+const supabaseKeyPayload = parseJwtPayload(SUPABASE_SERVICE_ROLE_KEY);
+
+if (supabaseKeyPayload?.role === 'anon') {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY must be the backend service-role key, not the public anon key.');
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -226,6 +247,34 @@ const createHttpError = (status, message) => {
   return error;
 };
 
+const getBearerToken = (authorizationHeader = '') => {
+  if (typeof authorizationHeader !== 'string') {
+    return '';
+  }
+
+  const match = authorizationHeader.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : '';
+};
+
+const requireAuthenticatedUser = async (req, res, next) => {
+  const token = getBearerToken(req.headers.authorization);
+
+  if (!token) {
+    res.status(401).json({ error: 'Authentication is required' });
+    return;
+  }
+
+  const { data, error } = await supabase.auth.getUser(token);
+
+  if (error || !data?.user?.id) {
+    res.status(401).json({ error: 'Invalid or expired authentication token' });
+    return;
+  }
+
+  req.user = data.user;
+  next();
+};
+
 const requireSupabaseResult = (result, fallbackMessage) => {
   if (result.error) {
     throw createHttpError(500, result.error.message || fallbackMessage);
@@ -270,34 +319,34 @@ const getCatalogByIds = async (ids) => {
   return new Map(rows.map((row) => [row.id, mapCatalogRow(row)]));
 };
 
-const getEntriesByYarnId = async (yarnId) => {
+const getEntriesByYarnId = async (userId, yarnId) => {
   const result = await supabase
     .from('user_yarn_entries')
     .select('*')
-    .eq('user_id', SUPABASE_DEFAULT_USER_ID)
+    .eq('user_id', userId)
     .eq('yarn_id', yarnId)
     .order('created_at', { ascending: true });
 
   return requireSupabaseResult(result, 'Failed to load yarn entries').map(mapEntryRow);
 };
 
-const getEntryById = async (id) => {
+const getEntryById = async (userId, id) => {
   const result = await supabase
     .from('user_yarn_entries')
     .select('*')
     .eq('id', id)
-    .eq('user_id', SUPABASE_DEFAULT_USER_ID)
+    .eq('user_id', userId)
     .maybeSingle();
 
   const data = requireSupabaseResult(result, 'Failed to load yarn entry');
   return data ? mapEntryRow(data) : null;
 };
 
-const listJoinedYarns = async () => {
+const listJoinedYarns = async (userId) => {
   const entryResult = await supabase
     .from('user_yarn_entries')
     .select('*')
-    .eq('user_id', SUPABASE_DEFAULT_USER_ID)
+    .eq('user_id', userId)
     .order('created_at', { ascending: true });
   const entries = requireSupabaseResult(entryResult, 'Failed to load yarn list').map(mapEntryRow);
   const catalogById = await getCatalogByIds([...new Set(entries.map((entry) => entry.yarnId))]);
@@ -315,24 +364,24 @@ const upsertCatalogYarn = async (catalogYarn) => {
   return mapCatalogRow(requireSupabaseResult(result, 'Failed to save catalog yarn'));
 };
 
-const updateEntryYarnId = async (entryId, yarnId) => {
+const updateEntryYarnId = async (userId, entryId, yarnId) => {
   const result = await supabase
     .from('user_yarn_entries')
     .update({ yarn_id: yarnId })
     .eq('id', entryId)
-    .eq('user_id', SUPABASE_DEFAULT_USER_ID)
+    .eq('user_id', userId)
     .select('*')
     .single();
 
   return mapEntryRow(requireSupabaseResult(result, 'Failed to update yarn entry'));
 };
 
-const updateEntryStatus = async (entryId, status) => {
+const updateEntryStatus = async (userId, entryId, status) => {
   const result = await supabase
     .from('user_yarn_entries')
     .update({ status })
     .eq('id', entryId)
-    .eq('user_id', SUPABASE_DEFAULT_USER_ID)
+    .eq('user_id', userId)
     .select('*')
     .single();
 
@@ -357,12 +406,12 @@ const removeCatalogIfUnreferenced = async (yarnId) => {
   }
 };
 
-const createEntry = async (yarnId, status = DEFAULT_STATUS) => {
+const createEntry = async (userId, yarnId, status = DEFAULT_STATUS) => {
   const result = await supabase
     .from('user_yarn_entries')
     .insert({
       id: randomUUID(),
-      user_id: SUPABASE_DEFAULT_USER_ID,
+      user_id: userId,
       yarn_id: yarnId,
       status,
     })
@@ -372,12 +421,12 @@ const createEntry = async (yarnId, status = DEFAULT_STATUS) => {
   return mapEntryRow(requireSupabaseResult(result, 'Failed to create yarn entry'));
 };
 
-const deleteEntry = async (entryId) => {
+const deleteEntry = async (userId, entryId) => {
   const result = await supabase
     .from('user_yarn_entries')
     .delete()
     .eq('id', entryId)
-    .eq('user_id', SUPABASE_DEFAULT_USER_ID);
+    .eq('user_id', userId);
 
   requireSupabaseResult(result, 'Failed to delete yarn entry');
 };
@@ -439,9 +488,11 @@ app.post('/scrape', (req, res) => {
     });
 });
 
+app.use('/api/yarn', requireAuthenticatedUser);
+
 app.get('/api/yarn', async (req, res) => {
   try {
-    res.json(await listJoinedYarns());
+    res.json(await listJoinedYarns(req.user.id));
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message || 'Failed to load yarn list' });
   }
@@ -456,7 +507,7 @@ app.get('/api/yarn/check', async (req, res) => {
 
   try {
     const catalogYarn = await getCatalogByNormalizedName(normalizedName);
-    const matchingEntries = catalogYarn ? await getEntriesByYarnId(catalogYarn.id) : [];
+    const matchingEntries = catalogYarn ? await getEntriesByYarnId(req.user.id, catalogYarn.id) : [];
 
     res.json({
       existsInDatabase: Boolean(catalogYarn),
@@ -486,7 +537,7 @@ app.post('/api/yarn', async (req, res) => {
   try {
     const existingCatalogYarn = await getCatalogByNormalizedName(normalizedName);
     const alreadyOnUserList = existingCatalogYarn
-      ? (await getEntriesByYarnId(existingCatalogYarn.id)).length > 0
+      ? (await getEntriesByYarnId(req.user.id, existingCatalogYarn.id)).length > 0
       : false;
 
     if (alreadyOnUserList && !allowDuplicate) {
@@ -500,7 +551,7 @@ app.post('/api/yarn', async (req, res) => {
     }
 
     const catalogYarn = await upsertCatalogYarn(sanitizeCatalogYarn(yarn, existingCatalogYarn || {}));
-    const entry = await createEntry(catalogYarn.id, yarn.status || DEFAULT_STATUS);
+    const entry = await createEntry(req.user.id, catalogYarn.id, yarn.status || DEFAULT_STATUS);
     res.status(201).json(buildJoinedYarn(entry, catalogYarn));
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message || 'Failed to add yarn' });
@@ -515,7 +566,7 @@ app.put('/api/yarn/:id', async (req, res) => {
   }
 
   try {
-    const entry = await getEntryById(req.params.id);
+    const entry = await getEntryById(req.user.id, req.params.id);
 
     if (!entry) {
       return res.status(404).json({ error: 'Yarn entry not found' });
@@ -539,7 +590,7 @@ app.put('/api/yarn/:id', async (req, res) => {
       sanitizeCatalogYarn(yarn, shouldRepointEntry ? otherCatalogYarn : existingCatalogYarn)
     );
     const updatedEntry = shouldRepointEntry
-      ? await updateEntryYarnId(entry.id, targetCatalogYarn.id)
+      ? await updateEntryYarnId(req.user.id, entry.id, targetCatalogYarn.id)
       : entry;
 
     if (shouldRepointEntry) {
@@ -554,14 +605,14 @@ app.put('/api/yarn/:id', async (req, res) => {
 
 app.patch('/api/yarn/:id', async (req, res) => {
   try {
-    const entry = await getEntryById(req.params.id);
+    const entry = await getEntryById(req.user.id, req.params.id);
 
     if (!entry) {
       return res.status(404).json({ error: 'Yarn entry not found' });
     }
 
     const status = typeof req.body?.status === 'string' ? req.body.status : entry.status;
-    const updatedEntry = await updateEntryStatus(entry.id, status);
+    const updatedEntry = await updateEntryStatus(req.user.id, entry.id, status);
     const catalogYarn = await getCatalogById(updatedEntry.yarnId);
 
     res.json(buildJoinedYarn(updatedEntry, catalogYarn));
@@ -572,13 +623,13 @@ app.patch('/api/yarn/:id', async (req, res) => {
 
 app.delete('/api/yarn/:id', async (req, res) => {
   try {
-    const entry = await getEntryById(req.params.id);
+    const entry = await getEntryById(req.user.id, req.params.id);
 
     if (!entry) {
       return res.status(404).json({ error: 'Yarn entry not found' });
     }
 
-    await deleteEntry(entry.id);
+    await deleteEntry(req.user.id, entry.id);
     await removeCatalogIfUnreferenced(entry.yarnId);
 
     res.json({ id: entry.id });
