@@ -10,12 +10,34 @@ const sectionStyle = {
   boxShadow: 'var(--shadow-soft)'
 };
 
+const collapsibleToggleStyle = {
+  width: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '12px',
+  padding: '0',
+  border: 'none',
+  background: 'transparent',
+  color: 'var(--text-primary)',
+  textAlign: 'left',
+  fontWeight: 700,
+  cursor: 'pointer'
+};
+
+const sectionContentStyle = {
+  marginTop: '16px'
+};
+
 const formatTimestamp = (timestamp) => {
   if (!timestamp) {
     return 'Not available';
   }
 
-  return new Date(timestamp).toLocaleString();
+  return new Date(timestamp).toLocaleString([], {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  });
 };
 
 const projectNoteDisplayStyle = {
@@ -45,9 +67,12 @@ const YarnDetail = ({
   const [manualError, setManualError] = useState('');
   const [regularPrice, setRegularPrice] = useState(yarn.regularPrice || '');
   const [regularPriceError, setRegularPriceError] = useState('');
+  const [isEditingRegularPrice, setIsEditingRegularPrice] = useState(false);
   const [projectNote, setProjectNote] = useState(yarn.projectNote || '');
   const [projectNoteError, setProjectNoteError] = useState('');
   const [isEditingProjectNote, setIsEditingProjectNote] = useState(false);
+  const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
+  const [isRecentPricesOpen, setIsRecentPricesOpen] = useState(false);
   const { isOnSale, isAtHistoricalLow } = derivePriceStatus(yarn);
 
   const handleDelete = () => {
@@ -92,6 +117,12 @@ const YarnDetail = ({
     }
 
     const didSave = await onUpdateRegularPrice(yarn.id, regularPrice);
+    if (didSave) {
+      setRegularPrice(regularPrice.trim());
+      setIsEditingRegularPrice(false);
+      return;
+    }
+
     if (!didSave) {
       setRegularPriceError('Could not save the regular price.');
     }
@@ -158,7 +189,48 @@ const YarnDetail = ({
           </div>
           <div>
             <div style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>Regular price</div>
-            <div style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>{yarn.regularPrice || 'Not set'}</div>
+            {isEditingRegularPrice ? (
+              <form onSubmit={handleRegularPriceSubmit} style={{ display: 'grid', gap: '8px', marginTop: '6px' }}>
+                <input
+                  type="text"
+                  value={regularPrice}
+                  onChange={(event) => setRegularPrice(event.target.value)}
+                  placeholder="e.g. $7.99"
+                />
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  <button type="submit" style={{ borderRadius: '999px', border: 'none', padding: '10px 14px', backgroundColor: 'var(--button-success-bg)', color: 'var(--button-primary-text)', fontWeight: 600 }}>
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRegularPrice(yarn.regularPrice || '');
+                      setRegularPriceError('');
+                      setIsEditingRegularPrice(false);
+                    }}
+                    style={{ borderRadius: '999px', border: '1px solid var(--button-secondary-border)', padding: '10px 14px', backgroundColor: 'var(--button-secondary-bg)', color: 'var(--button-secondary-text)', fontWeight: 600 }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {regularPriceError && <p style={{ margin: 0, color: 'var(--status-error-text)' }}>{regularPriceError}</p>}
+              </form>
+            ) : (
+              <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                <div style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>{yarn.regularPrice || 'Not set'}</div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRegularPrice(yarn.regularPrice || '');
+                    setRegularPriceError('');
+                    setIsEditingRegularPrice(true);
+                  }}
+                  style={{ borderRadius: '999px', border: '1px solid var(--button-secondary-border)', padding: '8px 12px', backgroundColor: 'var(--button-secondary-bg)', color: 'var(--button-secondary-text)', fontWeight: 600 }}
+                >
+                  {yarn.regularPrice ? 'Edit' : 'Set'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
         {(isOnSale || isAtHistoricalLow) && (
@@ -212,11 +284,6 @@ const YarnDetail = ({
         </div>
       </div>
 
-      <div style={{ ...sectionStyle, marginBottom: '20px' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '16px', color: 'var(--text-primary)' }}>Price History</h3>
-        <PriceHistoryChart priceHistory={yarn.priceHistory} lowestPriceAt={yarn.lowestPriceAt} />
-      </div>
-
       {yarn.priceSource === 'manual' && (
         <div style={{ ...sectionStyle, marginBottom: '20px' }}>
           <h3 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>Record Manual Price Change</h3>
@@ -235,23 +302,6 @@ const YarnDetail = ({
           {manualError && <p style={{ marginTop: '10px', color: 'var(--status-error-text)' }}>{manualError}</p>}
         </div>
       )}
-
-      <div style={{ ...sectionStyle, marginBottom: '20px' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>Set Regular Price</h3>
-        <form onSubmit={handleRegularPriceSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-start' }}>
-          <input
-            type="text"
-            value={regularPrice}
-            onChange={(event) => setRegularPrice(event.target.value)}
-            placeholder="e.g. $7.99"
-            style={{ flex: '1 1 220px' }}
-          />
-          <button type="submit" style={{ borderRadius: '999px', border: 'none', padding: '12px 18px', backgroundColor: 'var(--button-success-bg)', color: 'var(--button-primary-text)', fontWeight: 600 }}>
-            Save Regular Price
-          </button>
-        </form>
-        {regularPriceError && <p style={{ marginTop: '10px', color: 'var(--status-error-text)' }}>{regularPriceError}</p>}
-      </div>
 
       <div style={{ ...sectionStyle, marginBottom: '20px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: yarn.projectNote && !isEditingProjectNote ? '12px' : '0' }}>
@@ -312,20 +362,49 @@ const YarnDetail = ({
         )}
       </div>
 
-      <div style={{ ...sectionStyle }}>
-        <h3 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>Recent Price Points</h3>
-        {yarn.priceHistory?.length ? (
-          <div style={{ display: 'grid', gap: '10px' }}>
-            {[...yarn.priceHistory].reverse().map((entry) => (
-              <div key={entry.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', paddingBottom: '10px', borderBottom: '1px solid var(--border-subtle)' }}>
-                <span>{entry.displayPrice}</span>
-                <span style={{ color: 'var(--text-secondary)' }}>{formatTimestamp(entry.recordedAt)}</span>
-                <span style={{ color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{entry.source}</span>
-              </div>
-            ))}
+      <div style={{ ...sectionStyle, marginBottom: '20px' }}>
+        <button
+          type="button"
+          onClick={() => setIsPriceHistoryOpen((currentValue) => !currentValue)}
+          style={collapsibleToggleStyle}
+          aria-expanded={isPriceHistoryOpen}
+        >
+          <span style={{ fontSize: '1.1rem' }}>Price History</span>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>{isPriceHistoryOpen ? 'Hide' : 'Show'}</span>
+        </button>
+        {isPriceHistoryOpen && (
+          <div style={sectionContentStyle}>
+            <PriceHistoryChart priceHistory={yarn.priceHistory} lowestPriceAt={yarn.lowestPriceAt} />
           </div>
-        ) : (
-          <p>No prices recorded yet.</p>
+        )}
+      </div>
+
+      <div style={{ ...sectionStyle }}>
+        <button
+          type="button"
+          onClick={() => setIsRecentPricesOpen((currentValue) => !currentValue)}
+          style={collapsibleToggleStyle}
+          aria-expanded={isRecentPricesOpen}
+        >
+          <span style={{ fontSize: '1.1rem' }}>Recent Price Points</span>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>{isRecentPricesOpen ? 'Hide' : 'Show'}</span>
+        </button>
+        {isRecentPricesOpen && (
+          <div style={sectionContentStyle}>
+            {yarn.priceHistory?.length ? (
+              <div style={{ display: 'grid', gap: '10px' }}>
+                {[...yarn.priceHistory].reverse().map((entry) => (
+                  <div key={entry.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', paddingBottom: '10px', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <span>{entry.displayPrice}</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>{formatTimestamp(entry.recordedAt)}</span>
+                    <span style={{ color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{entry.source}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>No prices recorded yet.</p>
+            )}
+          </div>
         )}
       </div>
     </div>
