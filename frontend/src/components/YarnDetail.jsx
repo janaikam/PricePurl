@@ -18,11 +18,36 @@ const formatTimestamp = (timestamp) => {
   return new Date(timestamp).toLocaleString();
 };
 
-const YarnDetail = ({ yarn, onBack, onRefresh, onAddManualPrice, onUpdateRegularPrice, onMarkPurchased, onRestore, onDelete }) => {
+const projectNoteDisplayStyle = {
+  margin: 0,
+  padding: '14px 16px',
+  borderRadius: '14px',
+  border: '1px solid var(--border-subtle)',
+  backgroundColor: 'var(--surface-subtle)',
+  color: 'var(--text-primary)',
+  lineHeight: 1.6,
+  whiteSpace: 'pre-wrap'
+};
+
+const YarnDetail = ({
+  yarn,
+  onBack,
+  onRefresh,
+  onAddManualPrice,
+  onUpdateRegularPrice,
+  onSaveProjectNote,
+  onDeleteProjectNote,
+  onMarkPurchased,
+  onRestore,
+  onDelete
+}) => {
   const [manualPrice, setManualPrice] = useState('');
   const [manualError, setManualError] = useState('');
   const [regularPrice, setRegularPrice] = useState(yarn.regularPrice || '');
   const [regularPriceError, setRegularPriceError] = useState('');
+  const [projectNote, setProjectNote] = useState(yarn.projectNote || '');
+  const [projectNoteError, setProjectNoteError] = useState('');
+  const [isEditingProjectNote, setIsEditingProjectNote] = useState(false);
   const { isOnSale, isAtHistoricalLow } = derivePriceStatus(yarn);
 
   const handleDelete = () => {
@@ -69,6 +94,41 @@ const YarnDetail = ({ yarn, onBack, onRefresh, onAddManualPrice, onUpdateRegular
     const didSave = await onUpdateRegularPrice(yarn.id, regularPrice);
     if (!didSave) {
       setRegularPriceError('Could not save the regular price.');
+    }
+  };
+
+  const handleProjectNoteSubmit = async (event) => {
+    event.preventDefault();
+    setProjectNoteError('');
+
+    if (!projectNote.trim()) {
+      setProjectNoteError('Write a note before saving, or delete the note instead.');
+      return;
+    }
+
+    const didSave = await onSaveProjectNote(yarn.id, projectNote);
+    if (didSave) {
+      setProjectNote(projectNote.trim());
+      setIsEditingProjectNote(false);
+    } else {
+      setProjectNoteError('Could not save the project note.');
+    }
+  };
+
+  const handleDeleteProjectNote = async () => {
+    const confirmed = window.confirm('Delete this project note?');
+    if (!confirmed) {
+      return;
+    }
+
+    setProjectNoteError('');
+    const didDelete = await onDeleteProjectNote(yarn.id);
+
+    if (didDelete) {
+      setProjectNote('');
+      setIsEditingProjectNote(false);
+    } else {
+      setProjectNoteError('Could not delete the project note.');
     }
   };
 
@@ -191,6 +251,65 @@ const YarnDetail = ({ yarn, onBack, onRefresh, onAddManualPrice, onUpdateRegular
           </button>
         </form>
         {regularPriceError && <p style={{ marginTop: '10px', color: 'var(--status-error-text)' }}>{regularPriceError}</p>}
+      </div>
+
+      <div style={{ ...sectionStyle, marginBottom: '20px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: yarn.projectNote && !isEditingProjectNote ? '12px' : '0' }}>
+          <div>
+            <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Project Note</h3>
+            <p style={{ margin: '6px 0 0', color: 'var(--text-secondary)' }}>Keep a quick reminder of what you want to make with this yarn.</p>
+          </div>
+          {!isEditingProjectNote && yarn.projectNote && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              <button type="button" onClick={() => setIsEditingProjectNote(true)} style={{ borderRadius: '999px', border: '1px solid var(--button-secondary-border)', padding: '10px 16px', backgroundColor: 'var(--button-secondary-bg)', color: 'var(--button-secondary-text)', fontWeight: 600 }}>
+                Edit Note
+              </button>
+              <button type="button" onClick={handleDeleteProjectNote} style={{ borderRadius: '999px', border: '1px solid var(--status-error-text)', padding: '10px 16px', backgroundColor: 'var(--button-secondary-bg)', color: 'var(--status-error-text)', fontWeight: 600 }}>
+                Delete Note
+              </button>
+            </div>
+          )}
+        </div>
+
+        {isEditingProjectNote ? (
+          <form onSubmit={handleProjectNoteSubmit} style={{ display: 'grid', gap: '12px' }}>
+            <textarea
+              value={projectNote}
+              onChange={(event) => setProjectNote(event.target.value)}
+              placeholder="Example: cardigan for fall, baby blanket, or a colorwork hat"
+              rows={5}
+              style={{ width: '100%', resize: 'vertical' }}
+            />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              <button type="submit" style={{ borderRadius: '999px', border: 'none', padding: '12px 18px', backgroundColor: 'var(--button-primary-bg)', color: 'var(--button-primary-text)', fontWeight: 600 }}>
+                Save Note
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setProjectNote(yarn.projectNote || '');
+                  setProjectNoteError('');
+                  setIsEditingProjectNote(false);
+                }}
+                style={{ borderRadius: '999px', border: '1px solid var(--button-secondary-border)', padding: '12px 18px', backgroundColor: 'var(--button-secondary-bg)', color: 'var(--button-secondary-text)', fontWeight: 600 }}
+              >
+                Cancel
+              </button>
+            </div>
+            {projectNoteError && <p style={{ margin: 0, color: 'var(--status-error-text)' }}>{projectNoteError}</p>}
+          </form>
+        ) : yarn.projectNote ? (
+          <p style={projectNoteDisplayStyle}>{yarn.projectNote}</p>
+        ) : (
+          <div style={{ display: 'grid', gap: '12px' }}>
+            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>No project note saved yet.</p>
+            <div>
+              <button type="button" onClick={() => setIsEditingProjectNote(true)} style={{ borderRadius: '999px', border: 'none', padding: '12px 18px', backgroundColor: 'var(--button-primary-bg)', color: 'var(--button-primary-text)', fontWeight: 600 }}>
+                Add Project Note
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{ ...sectionStyle }}>

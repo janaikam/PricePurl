@@ -54,6 +54,14 @@ const DEFAULT_STATUS = 'active';
 const DEFAULT_SOURCE = 'manual';
 
 const normalizeName = (name = '') => name.trim().toLowerCase();
+const normalizeProjectNote = (value) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+};
 
 const parsePriceValue = (price) => {
   if (typeof price === 'number') {
@@ -239,6 +247,7 @@ const mapEntryRow = (row = {}) => ({
   userId: row.user_id,
   yarnId: row.yarn_id,
   status: row.status,
+  projectNote: normalizeProjectNote(row.project_note),
 });
 
 const createHttpError = (status, message) => {
@@ -388,6 +397,32 @@ const updateEntryStatus = async (userId, entryId, status) => {
   return mapEntryRow(requireSupabaseResult(result, 'Failed to update yarn entry'));
 };
 
+const updateEntryDetails = async (userId, entryId, { yarnId, status, projectNote } = {}) => {
+  const updates = {};
+
+  if (yarnId !== undefined) {
+    updates.yarn_id = yarnId;
+  }
+
+  if (status !== undefined) {
+    updates.status = status;
+  }
+
+  if (projectNote !== undefined) {
+    updates.project_note = normalizeProjectNote(projectNote);
+  }
+
+  const result = await supabase
+    .from('user_yarn_entries')
+    .update(updates)
+    .eq('id', entryId)
+    .eq('user_id', userId)
+    .select('*')
+    .single();
+
+  return mapEntryRow(requireSupabaseResult(result, 'Failed to update yarn entry'));
+};
+
 const removeCatalogIfUnreferenced = async (yarnId) => {
   const result = await supabase
     .from('user_yarn_entries')
@@ -440,6 +475,7 @@ const buildJoinedYarn = (entry, catalogYarn) => {
     id: entry.id,
     yarnId: entry.yarnId,
     status: entry.status,
+    projectNote: entry.projectNote,
     name: catalogYarn.name,
     url: catalogYarn.url,
     currentPrice: catalogYarn.currentPrice,
@@ -567,6 +603,7 @@ app.put('/api/yarn/:id', async (req, res) => {
 
   try {
     const entry = await getEntryById(req.user.id, req.params.id);
+    const hasProjectNote = Object.prototype.hasOwnProperty.call(yarn, 'projectNote');
 
     if (!entry) {
       return res.status(404).json({ error: 'Yarn entry not found' });
@@ -590,8 +627,13 @@ app.put('/api/yarn/:id', async (req, res) => {
       sanitizeCatalogYarn(yarn, shouldRepointEntry ? otherCatalogYarn : existingCatalogYarn)
     );
     const updatedEntry = shouldRepointEntry
-      ? await updateEntryYarnId(req.user.id, entry.id, targetCatalogYarn.id)
-      : entry;
+      ? await updateEntryDetails(req.user.id, entry.id, {
+          yarnId: targetCatalogYarn.id,
+          ...(hasProjectNote ? { projectNote: yarn.projectNote } : {}),
+        })
+      : await updateEntryDetails(req.user.id, entry.id, {
+          ...(hasProjectNote ? { projectNote: yarn.projectNote } : {}),
+        });
 
     if (shouldRepointEntry) {
       await removeCatalogIfUnreferenced(existingCatalogYarn.id);

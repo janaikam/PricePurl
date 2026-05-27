@@ -125,6 +125,7 @@ export const normalizeYarnWithHistory = (item = {}) => {
   const metadata = derivePriceMetadata(priceHistory);
   const lastHistoryEntry = priceHistory[priceHistory.length - 1];
   const regularPriceValue = parsePriceValue(item.regularPriceValue ?? item.regularPrice);
+  const projectNote = typeof item.projectNote === 'string' ? item.projectNote.trim() : '';
 
   return {
     id: item.id,
@@ -141,6 +142,7 @@ export const normalizeYarnWithHistory = (item = {}) => {
     priceSource: item.priceSource || DEFAULT_SOURCE,
     regularPrice: regularPriceValue === null ? '' : normalizeDisplayPrice(regularPriceValue),
     regularPriceValue,
+    ...(projectNote ? { projectNote } : {}),
     siteName: item.siteName || '',
     status: item.status || 'active'
   };

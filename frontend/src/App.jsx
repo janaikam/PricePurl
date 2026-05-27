@@ -503,6 +503,35 @@ function App() {
     }
   };
 
+  const saveProjectNote = async (id, projectNote) => {
+    const yarn = yarnList.find((entry) => entry.id === id);
+    if (!yarn) {
+      setError('Unable to find that yarn entry.');
+      return false;
+    }
+
+    setError('');
+    setNotice('');
+
+    try {
+      const savedYarn = await getRepository().updateYarnEntry(id, {
+        ...yarn,
+        projectNote,
+      });
+
+      setYarnList((prev) => prev.map((entry) => (
+        entry.id === id ? savedYarn : entry
+      )));
+      await syncGuestStorageState();
+      return true;
+    } catch (err) {
+      setError('Failed to save project note: ' + (err.message || err));
+      return false;
+    }
+  };
+
+  const deleteProjectNote = async (id) => saveProjectNote(id, '');
+
   const updateYarnStatus = async (id, status) => {
     try {
       const savedYarn = await getRepository().updateYarnEntryStatus(id, status);
@@ -582,11 +611,14 @@ function App() {
       )}
       {selectedYarn ? (
         <YarnDetail
+          key={selectedYarn.id}
           yarn={selectedYarn}
           onBack={() => setSelectedYarnId(null)}
           onRefresh={refreshPrice}
           onAddManualPrice={addManualPrice}
           onUpdateRegularPrice={updateRegularPrice}
+          onSaveProjectNote={saveProjectNote}
+          onDeleteProjectNote={deleteProjectNote}
           onMarkPurchased={markAsPurchased}
           onRestore={restoreYarn}
           onDelete={deleteYarn}
