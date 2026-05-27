@@ -12,6 +12,87 @@ const ACTIVE_STATUS = 'active';
 const PURCHASED_STATUS = 'purchased';
 const AUTO_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 const GUEST_IMPORT_DISMISSED_KEY = 'guestImportDismissedUserId';
+const MAIN_PAGE = 'main';
+const AUTH_PAGE = 'auth';
+const ADD_YARN_PAGE = 'add-yarn';
+
+const pageFrameStyle = {
+  padding: '0 16px 32px',
+};
+
+const headerShellStyle = {
+  position: 'sticky',
+  top: 0,
+  zIndex: 10,
+  padding: '16px 16px 14px',
+  borderBottom: '1px solid var(--header-border)',
+  background: 'var(--surface-header)',
+  backdropFilter: 'blur(14px)',
+};
+
+const headerInnerStyle = {
+  maxWidth: '960px',
+  margin: '0 auto',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '16px',
+  flexWrap: 'wrap',
+};
+
+const wordmarkButtonStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '12px',
+  padding: '10px 16px',
+  borderRadius: '999px',
+  border: '1px solid var(--brand-border)',
+  background: 'var(--surface-brand)',
+  color: 'var(--brand-text)',
+  boxShadow: 'var(--shadow-soft)',
+  cursor: 'pointer',
+};
+
+const headerActionStyle = {
+  borderRadius: '999px',
+  border: '1px solid var(--button-secondary-border)',
+  padding: '10px 16px',
+  backgroundColor: 'var(--button-secondary-bg)',
+  color: 'var(--button-secondary-text)',
+  fontWeight: 600,
+};
+
+const feedbackBannerStyle = {
+  maxWidth: '960px',
+  margin: '16px auto 0',
+  textAlign: 'left',
+};
+
+const infoNoticeStyle = {
+  maxWidth: '960px',
+  margin: '24px auto 24px',
+  padding: '14px 18px',
+  borderRadius: '18px',
+  border: '1px solid var(--info-border)',
+  background: 'var(--surface-info)',
+  textAlign: 'left',
+};
+
+const authPageWrapStyle = {
+  maxWidth: '960px',
+  margin: '24px auto 0',
+};
+
+const formPageWrapStyle = {
+  maxWidth: '960px',
+  margin: '24px auto 0',
+  padding: '24px',
+  borderRadius: '24px',
+  border: '1px solid var(--border-subtle)',
+  background: 'var(--surface-panel)',
+  boxShadow: 'var(--shadow-soft)',
+  textAlign: 'left',
+};
 
 const collapsibleSectionStyle = {
   maxWidth: '960px',
@@ -60,7 +141,7 @@ function App() {
   const [isImportingGuestYarns, setIsImportingGuestYarns] = useState(false);
   const [isActiveListOpen, setIsActiveListOpen] = useState(true);
   const [isPurchasedListOpen, setIsPurchasedListOpen] = useState(false);
-  const [isAddYarnOpen, setIsAddYarnOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(MAIN_PAGE);
   const accessToken = session?.access_token || '';
 
   const createAuthenticatedRepository = () => createApiClient({
@@ -233,6 +314,7 @@ function App() {
     }
 
     setNotice('Signed in successfully.');
+    setCurrentPage(MAIN_PAGE);
     return result;
   };
 
@@ -252,6 +334,7 @@ function App() {
 
     if (result.data.session) {
       setNotice('Account created and signed in.');
+      setCurrentPage(MAIN_PAGE);
     } else {
       setNotice('Account created. Check your email to finish signing in.');
     }
@@ -275,6 +358,7 @@ function App() {
     }
 
     setNotice('Signed out. Guest yarns in this browser are still available.');
+    setCurrentPage(MAIN_PAGE);
   };
 
   const handleDismissGuestImport = () => {
@@ -391,6 +475,7 @@ function App() {
       });
 
       setYarnList((prev) => [...prev, createdYarn]);
+      setCurrentPage(MAIN_PAGE);
       await syncGuestStorageState();
       return true;
     } catch (err) {
@@ -588,14 +673,65 @@ function App() {
   const selectedYarn = yarnList.find((yarn) => yarn.id === selectedYarnId) || null;
   const activeListLabel = `Your Yarn List (${activeYarnList.length})`;
   const purchasedListLabel = `Purchased Yarn (${purchasedYarnList.length})`;
+  const showGuestSaveNotice = !session?.user && currentPage === MAIN_PAGE && !selectedYarn;
+  const accountActionLabel = session?.user ? 'Account' : 'Sign In';
+  const isMainPage = currentPage === MAIN_PAGE;
+  const isAuthPage = currentPage === AUTH_PAGE;
+  const isAddYarnPage = currentPage === ADD_YARN_PAGE;
+
+  const createHeaderActionStyle = (isActive) => ({
+    ...headerActionStyle,
+    borderColor: isActive ? 'var(--button-primary-bg)' : headerActionStyle.border.split(' ')[2],
+    backgroundColor: isActive ? 'var(--accent-bg)' : 'var(--button-secondary-bg)',
+    color: isActive ? 'var(--text-primary)' : 'var(--button-secondary-text)',
+  });
 
   return (
-    <div style={{ padding: '0 16px 32px' }}>
-      <h1>Yarn Price Tracker</h1>
-      {error && <div style={{ color: 'var(--status-error-text)', marginBottom: '1em' }}>{error}</div>}
-      {notice && <div style={{ color: 'var(--status-success-text)', marginBottom: '1em' }}>{notice}</div>}
-      {session?.user && showGuestImportPrompt && (
-        <div style={{ maxWidth: '960px', margin: '0 auto 24px', padding: '16px 18px', borderRadius: '18px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--surface-card)', boxShadow: 'var(--shadow-soft)', textAlign: 'left' }}>
+    <div>
+      <header style={headerShellStyle}>
+        <div style={headerInnerStyle}>
+          <button
+            type="button"
+            onClick={() => {
+              setCurrentPage(MAIN_PAGE);
+              setSelectedYarnId(null);
+            }}
+            style={wordmarkButtonStyle}
+          >
+            <span style={{ width: '12px', height: '12px', borderRadius: '999px', background: 'var(--button-primary-bg)', boxShadow: '0 0 0 5px var(--accent-bg)' }} />
+            <span style={{ display: 'grid', textAlign: 'left', lineHeight: 1.05 }}>
+              <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.2rem', fontWeight: 700, letterSpacing: '-0.03em' }}>Price Purl</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Yarn Tracker</span>
+            </span>
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {session?.user && (
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                {session.user.email || 'Signed in'}
+              </span>
+            )}
+            <button type="button" onClick={() => {
+              setSelectedYarnId(null);
+              setCurrentPage(ADD_YARN_PAGE);
+            }} style={createHeaderActionStyle(isAddYarnPage)}>
+              Add Yarn
+            </button>
+            <button type="button" onClick={() => {
+              setSelectedYarnId(null);
+              setCurrentPage(AUTH_PAGE);
+            }} style={createHeaderActionStyle(isAuthPage)}>
+              {accountActionLabel}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div style={pageFrameStyle}>
+        {error && <div style={{ ...feedbackBannerStyle, color: 'var(--status-error-text)' }}>{error}</div>}
+        {notice && <div style={{ ...feedbackBannerStyle, color: 'var(--status-success-text)' }}>{notice}</div>}
+
+        {session?.user && showGuestImportPrompt && isMainPage && (
+          <div style={{ maxWidth: '960px', margin: '24px auto 24px', padding: '16px 18px', borderRadius: '18px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--surface-card)', boxShadow: 'var(--shadow-soft)', textAlign: 'left' }}>
           <p style={{ marginBottom: '12px' }}>
             You still have {guestYarnCount} guest yarn{guestYarnCount === 1 ? '' : 's'} stored only in this browser. Import them into your signed-in account?
           </p>
@@ -609,22 +745,67 @@ function App() {
           </div>
         </div>
       )}
-      {selectedYarn ? (
-        <YarnDetail
-          key={selectedYarn.id}
-          yarn={selectedYarn}
-          onBack={() => setSelectedYarnId(null)}
-          onRefresh={refreshPrice}
-          onAddManualPrice={addManualPrice}
-          onUpdateRegularPrice={updateRegularPrice}
-          onSaveProjectNote={saveProjectNote}
-          onDeleteProjectNote={deleteProjectNote}
-          onMarkPurchased={markAsPurchased}
-          onRestore={restoreYarn}
-          onDelete={deleteYarn}
-        />
-      ) : (
-        <>
+
+        {isAuthPage ? (
+          <div style={authPageWrapStyle}>
+            <AuthPanel
+              session={session}
+              isAuthReady={isAuthReady}
+              isSupabaseConfigured={isSupabaseConfigured}
+              guestYarnCount={guestYarnCount}
+              onSignIn={handleSignIn}
+              onSignUp={handleSignUp}
+              onSignOut={handleSignOut}
+              onImportGuestYarns={importGuestYarns}
+              isImportingGuestYarns={isImportingGuestYarns}
+              onBack={() => setCurrentPage(MAIN_PAGE)}
+            />
+          </div>
+        ) : isAddYarnPage ? (
+          <section style={formPageWrapStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '12px' }}>
+              <div>
+                <p style={{ marginBottom: '6px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.78rem' }}>Add To Tracker</p>
+                <h2 style={{ marginTop: 0, marginBottom: 0 }}>Add a new yarn</h2>
+              </div>
+              <button type="button" onClick={() => setCurrentPage(MAIN_PAGE)} style={headerActionStyle}>
+                Back To Yarn List
+              </button>
+            </div>
+            <p style={{ marginBottom: '18px', color: 'var(--text-secondary)' }}>
+              Paste a product link to pull details automatically, or enter the yarn manually if you already know the price.
+            </p>
+            <AddYarn onAddYarn={addYarn} />
+          </section>
+        ) : selectedYarn ? (
+          <YarnDetail
+            key={selectedYarn.id}
+            yarn={selectedYarn}
+            onBack={() => setSelectedYarnId(null)}
+            onRefresh={refreshPrice}
+            onAddManualPrice={addManualPrice}
+            onUpdateRegularPrice={updateRegularPrice}
+            onSaveProjectNote={saveProjectNote}
+            onDeleteProjectNote={deleteProjectNote}
+            onMarkPurchased={markAsPurchased}
+            onRestore={restoreYarn}
+            onDelete={deleteYarn}
+          />
+        ) : (
+          <>
+            {showGuestSaveNotice && (
+              <section style={infoNoticeStyle}>
+                <p style={{ marginBottom: !isSupabaseConfigured ? '8px' : 0, color: 'var(--text-primary)', fontWeight: 600 }}>
+                  Sign in to keep your yarn list saved across devices.
+                </p>
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  {isSupabaseConfigured
+                    ? 'If you stay in guest mode, your yarns remain saved only in this browser.'
+                    : 'Supabase auth is not configured in this environment yet, so your yarns stay in this browser only.'}
+                </p>
+              </section>
+            )}
+
           <section style={collapsibleSectionStyle}>
             <button
               type="button"
@@ -644,23 +825,6 @@ function App() {
                   onSelectYarn={setSelectedYarnId}
                   hideTitle
                 />
-              </div>
-            )}
-          </section>
-
-          <section style={collapsibleSectionStyle}>
-            <button
-              type="button"
-              onClick={() => setIsAddYarnOpen((currentValue) => !currentValue)}
-              style={collapsibleToggleStyle}
-              aria-expanded={isAddYarnOpen}
-            >
-              <span>Add Yarn</span>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>{isAddYarnOpen ? 'Hide' : 'Show'}</span>
-            </button>
-            {isAddYarnOpen && (
-              <div style={collapsibleContentStyle}>
-                <AddYarn onAddYarn={addYarn} />
               </div>
             )}
           </section>
@@ -688,19 +852,9 @@ function App() {
             )}
           </section>
 
-          <AuthPanel
-            session={session}
-            isAuthReady={isAuthReady}
-            isSupabaseConfigured={isSupabaseConfigured}
-            guestYarnCount={guestYarnCount}
-            onSignIn={handleSignIn}
-            onSignUp={handleSignUp}
-            onSignOut={handleSignOut}
-            onImportGuestYarns={importGuestYarns}
-            isImportingGuestYarns={isImportingGuestYarns}
-          />
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

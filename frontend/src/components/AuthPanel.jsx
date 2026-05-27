@@ -47,13 +47,13 @@ const AuthPanel = ({
   onSignOut,
   onImportGuestYarns,
   isImportingGuestYarns,
+  onBack,
 }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState('signIn');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAuthViewOpen, setIsAuthViewOpen] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -88,7 +88,10 @@ const AuthPanel = ({
   if (!isAuthReady) {
     return (
       <section style={panelStyle}>
-        <h2 style={{ marginTop: 0 }}>Account</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '8px' }}>
+          <h2 style={{ marginTop: 0, marginBottom: 0 }}>Account</h2>
+          {onBack && <button type="button" onClick={onBack} style={secondaryButtonStyle}>Back To Yarn List</button>}
+        </div>
         <p>Checking your saved session.</p>
       </section>
     );
@@ -97,9 +100,15 @@ const AuthPanel = ({
   if (session?.user) {
     return (
       <section style={panelStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '12px' }}>
+          <div>
+            <p style={{ marginBottom: '6px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.78rem' }}>Account</p>
+            <h2 style={{ marginTop: 0, marginBottom: 0 }}>You are signed in</h2>
+          </div>
+          {onBack && <button type="button" onClick={onBack} style={secondaryButtonStyle}>Back To Yarn List</button>}
+        </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
           <div>
-            <h2 style={{ marginTop: 0, marginBottom: '8px' }}>Account</h2>
             <p style={{ marginBottom: '8px' }}>Signed in as {session.user.email || 'your account'}.</p>
             <p style={{ color: 'var(--text-secondary)' }}>Your yarn list now saves to Supabase instead of staying only in this browser.</p>
           </div>
@@ -124,20 +133,19 @@ const AuthPanel = ({
     );
   }
 
-  if (!isAuthViewOpen) {
+  if (!isSupabaseConfigured) {
     return (
       <section style={panelStyle}>
-        <h2 style={{ marginTop: 0 }}>Optional Login</h2>
-        <p style={{ marginBottom: '12px', color: 'var(--text-secondary)' }}>
-          You can keep using the app as a guest, but your yarn list will stay only in this browser until you sign in.
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '12px' }}>
+          <div>
+            <p style={{ marginBottom: '6px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.78rem' }}>Guest Mode</p>
+            <h2 style={{ marginTop: 0, marginBottom: 0 }}>Sign in is not available here yet</h2>
+          </div>
+          {onBack && <button type="button" onClick={onBack} style={secondaryButtonStyle}>Back To Yarn List</button>}
+        </div>
+        <p style={{ color: 'var(--text-secondary)' }}>
+          Supabase auth is not configured in the frontend environment, so the app is currently running in guest-only mode.
         </p>
-        {!isSupabaseConfigured ? (
-          <p style={{ color: 'var(--status-error-text)' }}>Supabase auth is not configured in the frontend environment yet, so the app is running in guest-only mode.</p>
-        ) : (
-          <button type="button" onClick={() => setIsAuthViewOpen(true)} style={buttonStyle}>
-            Sign In
-          </button>
-        )}
       </section>
     );
   }
@@ -145,13 +153,14 @@ const AuthPanel = ({
   return (
     <section style={panelStyle}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '12px' }}>
-        <h2 style={{ marginTop: 0, marginBottom: 0 }}>Optional Login</h2>
-        <button type="button" onClick={() => setIsAuthViewOpen(false)} style={secondaryButtonStyle}>
-          Continue as Guest
-        </button>
+        <div>
+          <p style={{ marginBottom: '6px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.78rem' }}>Account</p>
+          <h2 style={{ marginTop: 0, marginBottom: 0 }}>Save your yarn list</h2>
+        </div>
+        {onBack && <button type="button" onClick={onBack} style={secondaryButtonStyle}>Back To Yarn List</button>}
       </div>
       <p style={{ marginBottom: '12px', color: 'var(--text-secondary)' }}>
-        Use an account to save your yarn list across devices. If you skip login, everything stays in this browser only.
+        Use an account to save your yarn list across devices. If you skip sign-in, everything stays in this browser only.
       </p>
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <button
@@ -194,7 +203,7 @@ const AuthPanel = ({
           <button type="submit" disabled={isSubmitting} style={buttonStyle}>
             {isSubmitting ? 'Working...' : mode === 'signUp' ? 'Create Account' : 'Sign In'}
           </button>
-          <span style={{ color: 'var(--text-secondary)' }}>Guest mode remains available either way.</span>
+          <span style={{ color: 'var(--text-secondary)' }}>You can return to the yarn list without signing in.</span>
         </div>
         {message && <p style={{ color: message.includes('failed') || message.includes('Enter both') ? 'var(--status-error-text)' : 'var(--status-success-text)' }}>{message}</p>}
       </form>

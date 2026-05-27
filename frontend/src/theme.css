@@ -33,15 +33,22 @@
   --surface-subtle: var(--color-secondary-surface);
   --surface-panel: linear-gradient(135deg, #fff8fc 0%, var(--color-secondary-surface) 52%, var(--color-card-background) 100%);
   --surface-hero: linear-gradient(135deg, rgba(214, 90, 146, 0.14) 0%, rgba(106, 183, 255, 0.14) 100%);
+  --surface-header: linear-gradient(180deg, rgba(255, 255, 255, 0.84) 0%, rgba(255, 255, 255, 0.72) 100%);
+  --surface-brand: linear-gradient(135deg, rgba(255, 179, 138, 0.2) 0%, rgba(214, 90, 146, 0.14) 48%, rgba(106, 183, 255, 0.16) 100%);
+  --surface-info: linear-gradient(135deg, rgba(74, 144, 226, 0.1) 0%, rgba(255, 255, 255, 0.92) 100%);
   --surface-chart: #fffafb;
 
   --text-primary: var(--color-primary-text);
   --text-secondary: var(--color-secondary-text);
   --text-muted: var(--color-muted-text);
   --text-inverse: #ffffff;
+  --brand-text: var(--text-primary);
 
   --border-subtle: var(--color-border-light);
   --border-strong: var(--color-border-dark);
+  --header-border: rgba(185, 176, 217, 0.5);
+  --brand-border: rgba(214, 90, 146, 0.2);
+  --info-border: rgba(74, 144, 226, 0.16);
 
   --button-primary-bg: var(--color-berry-pink);
   --button-primary-hover: var(--color-pink-hover);
@@ -94,15 +101,22 @@
     --surface-subtle: var(--color-dark-surface);
     --surface-panel: linear-gradient(135deg, rgba(214, 90, 146, 0.18) 0%, rgba(43, 49, 69, 0.96) 52%, rgba(53, 60, 82, 0.98) 100%);
     --surface-hero: linear-gradient(135deg, rgba(214, 90, 146, 0.22) 0%, rgba(106, 183, 255, 0.16) 100%);
+    --surface-header: linear-gradient(180deg, rgba(31, 34, 48, 0.86) 0%, rgba(31, 34, 48, 0.74) 100%);
+    --surface-brand: linear-gradient(135deg, rgba(214, 90, 146, 0.24) 0%, rgba(53, 60, 82, 0.96) 52%, rgba(106, 183, 255, 0.22) 100%);
+    --surface-info: linear-gradient(135deg, rgba(74, 144, 226, 0.16) 0%, rgba(43, 49, 69, 0.96) 100%);
     --surface-chart: rgba(43, 49, 69, 0.96);
 
     --text-primary: var(--color-dark-text);
     --text-secondary: var(--color-dark-muted-text);
     --text-muted: #8f9ab4;
     --text-inverse: #141824;
+    --brand-text: var(--text-primary);
 
     --border-subtle: #47506a;
     --border-strong: #69738f;
+    --header-border: rgba(105, 115, 143, 0.56);
+    --brand-border: rgba(255, 179, 138, 0.18);
+    --info-border: rgba(155, 199, 255, 0.2);
 
     --button-secondary-bg: var(--surface-subtle);
     --button-secondary-hover: #39415c;
