@@ -31,7 +31,7 @@ public class GenericScraper implements Scraper {
                             return null;
                         }
 
-                        const match = value.match(/\$\d+,?\d*\.\d{2}/);
+                        const match = value.match(/\\$\\d+,?\\d*\\.\\d{2}/);
                         return match ? match[0] : null;
                     };
 
@@ -148,7 +148,7 @@ public class GenericScraper implements Scraper {
                     }
 
                     if (!currentPrice || !regularPrice) {
-                        const priceRegex = /\$\d+,?\d*\.\d{2}/g;
+                        const priceRegex = /\\$\\d+,?\\d*\\.\\d{2}/g;
                         const distinctPrices = new Set();
 
                         for (const element of document.querySelectorAll('body *')) {
