@@ -11,7 +11,7 @@ const badgeStyle = {
 
 const YarnItem = ({ yarn, onSelect }) => {
   const { isOnSale, isAtHistoricalLow } = derivePriceStatus(yarn);
-  const statusLabel = isOnSale ? 'On Sale' : (isAtHistoricalLow ? 'Historical Low' : 'View Details');
+  const statusLabel = isAtHistoricalLow ? 'Historical Low' : (isOnSale ? 'On Sale' : 'View Details');
 
   return (
     <button
@@ -44,8 +44,8 @@ const YarnItem = ({ yarn, onSelect }) => {
           <span
             style={{
               ...badgeStyle,
-              backgroundColor: isOnSale ? 'var(--status-success-bg)' : 'var(--status-warning-bg)',
-              color: isOnSale ? 'var(--status-success-text)' : 'var(--status-warning-text)'
+              backgroundColor: isAtHistoricalLow ? 'var(--status-warning-bg)' : 'var(--status-success-bg)',
+              color: isAtHistoricalLow ? 'var(--status-warning-text)' : 'var(--status-success-text)'
             }}
           >
             {statusLabel}
