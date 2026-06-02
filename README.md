@@ -182,6 +182,12 @@ The original MVP notes in `yarn_tracker_mvp_updated.md` describe the first local
 - richer price history tracking
 - a dedicated Java scraping service
 
+## App Demonstration
+
+https://github.com/user-attachments/assets/f4dbfa7c-029c-43a1-9cb7-6d424af727b8
+
+
+
 ## Next Directions
 
 Natural next steps for the project include:
